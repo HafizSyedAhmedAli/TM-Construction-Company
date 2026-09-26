@@ -1,0 +1,10 @@
+/* apps/web/src/app/globals.css */
+@import "tailwindcss";
+
+@theme {
+  --color-brand: #ef1825;
+  --color-brand-dark: #c81420;
+  --color-brand-gold: #ffcd00;
+  --color-brand-gray: #7a757b;
+  --color-brand-black: #231f1e;
+}
