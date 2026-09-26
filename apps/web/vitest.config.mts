@@ -1,7 +1,9 @@
-// apps/web/vitest.config.ts
+// apps/web/vitest.config.mts
 import { defineConfig } from "vitest/config";
+import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
+  plugins: [tsconfigPaths()],
   esbuild: {
     jsx: "automatic",
     jsxImportSource: "react",

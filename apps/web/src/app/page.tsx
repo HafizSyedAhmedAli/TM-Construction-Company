@@ -1,21 +1,29 @@
 // apps/web/src/app/page.tsx
 "use client";
 
-import { useState } from "react";
 import Image from "next/image";
-import { IntakeForm } from "@/components/IntakeForm";
+import { IntakeForm, type IntakeSubmitResult } from "@/components/IntakeForm";
 import type { LeadIntakeInput } from "@tmcc/lead-intake";
 
 export default function HomePage() {
-  const [submitted, setSubmitted] = useState(false);
-
-  async function handleSubmit(data: LeadIntakeInput) {
+  async function handleSubmit(
+    data: LeadIntakeInput,
+  ): Promise<IntakeSubmitResult> {
     const res = await fetch("/api/leads", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
-    if (res.ok) setSubmitted(true);
+
+    if (!res.ok) {
+      // Form already validated client-side; a non-OK response here means
+      // a server-side issue, not a bad submission — surface no estimate
+      // rather than pretending the lead was captured.
+      throw new Error("Failed to submit lead");
+    }
+
+    const body = await res.json();
+    return { estimate: body.estimate };
   }
 
   return (
@@ -40,13 +48,7 @@ export default function HomePage() {
       </div>
 
       <div className="w-full max-w-md bg-white border-t-4 border-brand border-x border-b border-stone-200 rounded-xl shadow-sm p-8">
-        {submitted ? (
-          <p className="text-stone-700">
-            Thanks — we've received your details and will be in touch shortly.
-          </p>
-        ) : (
-          <IntakeForm onSubmit={handleSubmit} />
-        )}
+        <IntakeForm onSubmit={handleSubmit} />
       </div>
 
       <p className="text-xs text-stone-400 mt-8 text-center max-w-md">
