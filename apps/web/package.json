@@ -9,6 +9,7 @@
     "@tmcc/lead-intake": "workspace:*",
     "@tmcc/rate-cards": "workspace:*",
     "@tmcc/shared-types": "workspace:*",
+    "@tmcc/render-engine": "workspace:*",
     "class-variance-authority": "^0.7.1",
     "lucide-react": "^0.541.0",
     "cn": "^0.4.0",

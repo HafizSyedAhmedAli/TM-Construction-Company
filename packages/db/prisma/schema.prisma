@@ -3,20 +3,20 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
 model Lead {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   name      String
   contact   String
   city      String
   model     Int
   category  String
-  source    String   @default("FORM")
-  createdAt DateTime @default(now())
+  source    String    @default("FORM")
+  createdAt DateTime  @default(now())
   projects  Project[]
 }
 
@@ -37,6 +37,7 @@ model Project {
   status       String   @default("NEW")
   meetingNotes String?
   cadFile      CadFile?
+  render       Render?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
@@ -54,8 +55,25 @@ model CadFile {
   project    Project  @relation(fields: [projectId], references: [id])
   fileName   String
   format     String   @default("dxf") // FR-8: dwg->dxf conversion is not implemented yet — see cad-upload route
-  geometry   Json     // Geometry shape from @tmcc/shared-types, staff-correctable per FR-10
-  boq        Json?    // BOQResult once office finalizes (FR-13/14); null until then
+  geometry   Json // Geometry shape from @tmcc/shared-types, staff-correctable per FR-10
+  boq        Json? // BOQResult once office finalizes (FR-13/14); null until then
   uploadedAt DateTime @default(now())
   updatedAt  DateTime @updatedAt
+}
+
+// FR-16/17, §9.3: one presentation render per project, generated
+// independently from the BOQ pipeline (CadFile.boq) — the 3D render must
+// never be used to derive quantities, only shown to office/client. NFR-7:
+// this record simply won't exist yet if generation failed or hasn't been
+// tried; that must never block CadFile.boq from being finalized.
+model Render {
+  id          String   @id @default(cuid())
+  projectId   String   @unique
+  project     Project  @relation(fields: [projectId], references: [id])
+  // Served from apps/web/public/renders for now (see the render route) —
+  // swap for real object storage (S3/Vercel Blob/etc, per §6) before this
+  // needs to survive a redeploy or scale past one server.
+  imageUrl    String
+  promptUsed  String
+  generatedAt DateTime @default(now())
 }
