@@ -13,6 +13,7 @@ vi.mock("@tmcc/db", () => ({
     project: { findUnique: vi.fn(), update: vi.fn() },
     cadFile: { upsert: vi.fn() },
   },
+  Prisma: { JsonNull: Symbol("Prisma.JsonNull") },
 }));
 
 import { prisma } from "@tmcc/db";

@@ -1,7 +1,7 @@
 // apps/web/src/app/api/projects/[id]/geometry/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import type { Geometry } from "@tmcc/shared-types";
-import { prisma } from "@tmcc/db";
+import { Prisma, prisma } from "@tmcc/db";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -28,7 +28,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
 
   const updated = await prisma.cadFile.update({
     where: { projectId },
-    data: { geometry: geometry as unknown as object, boq: null },
+    data: { geometry: geometry as unknown as object, boq: Prisma.JsonNull },
   });
 
   return NextResponse.json(updated);

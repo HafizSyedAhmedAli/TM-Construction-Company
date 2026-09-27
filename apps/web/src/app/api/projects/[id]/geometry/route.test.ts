@@ -4,9 +4,10 @@ import { PATCH } from "./route";
 
 vi.mock("@tmcc/db", () => ({
   prisma: { cadFile: { findUnique: vi.fn(), update: vi.fn() } },
+  Prisma: { JsonNull: Symbol("Prisma.JsonNull") },
 }));
 
-import { prisma } from "@tmcc/db";
+import { Prisma, prisma } from "@tmcc/db";
 
 function ctx(id: string) {
   return { params: Promise.resolve({ id }) };
@@ -66,7 +67,7 @@ describe("PATCH /api/projects/:id/geometry", () => {
     expect(res.status).toBe(200);
     expect(prisma.cadFile.update).toHaveBeenCalledWith({
       where: { projectId: "p1" },
-      data: { geometry: VALID_GEOMETRY, boq: null },
+      data: { geometry: VALID_GEOMETRY, boq: Prisma.JsonNull },
     });
   });
 });

@@ -1,7 +1,6 @@
-// apps/web/src/app/api/projects/[id]/cad-upload/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { parseDxfToGeometry } from "@tmcc/cad-parser";
-import { prisma } from "@tmcc/db";
+import { Prisma, prisma } from "@tmcc/db";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -59,7 +58,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     update: {
       fileName: file.name,
       geometry: geometry as unknown as object,
-      boq: null,
+      boq: Prisma.JsonNull,
     },
   });
 
