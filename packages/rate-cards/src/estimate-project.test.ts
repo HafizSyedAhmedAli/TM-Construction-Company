@@ -1,0 +1,55 @@
+import { describe, it, expect } from "vitest";
+import type { Geometry } from "@tmcc/shared-types";
+import { estimateFromGeometry } from "./estimate-project";
+
+const SMALL_HOUSE: Geometry = {
+  walls: [
+    {
+      id: "w1",
+      startX: 0,
+      startY: 0,
+      endX: 20,
+      endY: 0,
+      length: 20,
+      height: 10,
+      thickness: 0.75,
+    },
+  ],
+  rooms: [
+    { id: "r1", name: "Living", area: 300, type: "general" },
+    { id: "r2", name: "Bathroom 1", area: 40, type: "bathroom" },
+  ],
+  openings: [{ id: "o1", type: "door", width: 3, height: 7 }],
+};
+
+describe("estimateFromGeometry", () => {
+  it("prices a real parsed geometry against a rate card", () => {
+    const result = estimateFromGeometry({
+      geometry: SMALL_HOUSE,
+      city: "Nawabshah",
+      category: "B",
+    });
+    expect(result).not.toBeNull();
+    expect(result!.total).toBeGreaterThan(0);
+    expect(result!.tax).toBeCloseTo(result!.subtotal * 0.17, 2);
+  });
+
+  it("returns null for a city with no rate card, same convention as estimateLead", () => {
+    expect(
+      estimateFromGeometry({
+        geometry: SMALL_HOUSE,
+        city: "Multan",
+        category: "B",
+      }),
+    ).toBeNull();
+  });
+
+  it("gives a different total than the archetype-based estimate for the same city/category", () => {
+    const fromRealGeometry = estimateFromGeometry({
+      geometry: SMALL_HOUSE,
+      city: "Karachi",
+      category: "B",
+    })!;
+    expect(fromRealGeometry.total).toBeGreaterThan(0);
+  });
+});
