@@ -53,7 +53,8 @@ export async function generateRender({
 }: GenerateRenderInput): Promise<GenerateRenderResult> {
   const promptUsed = buildRenderPrompt(geometry, category);
   const schematicPng = await buildSchematicPng(geometry);
-
+  console.log(promptUsed);
+  
   const result = await generateText({
     model: resolveModel(),
     providerOptions: {

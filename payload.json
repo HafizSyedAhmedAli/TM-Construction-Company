@@ -1,0 +1,12 @@
+{
+  "contents": [
+    {
+      "parts": [
+        { "text": "a simple test image of a red circle on white background" }
+      ]
+    }
+  ],
+  "generationConfig": {
+    "responseModalities": ["TEXT", "IMAGE"]
+  }
+}

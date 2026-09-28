@@ -18,6 +18,13 @@ import {
 
 interface CadReviewPanelProps {
   projectId: string;
+  /** Whatever was already saved on this project, so a page refresh doesn't
+   * throw away an earlier upload/correction/finalize. */
+  initialGeometry?: Geometry | null;
+  initialBoq?: BOQResult | null;
+  /** Called after a successful upload so the parent (which owns the
+   * render-availability check) knows a CAD file now exists. */
+  onGeometryUploaded?: () => void;
 }
 
 type Status = "idle" | "uploading" | "reviewing" | "saving" | "calculating";
@@ -32,10 +39,17 @@ const currency = new Intl.NumberFormat("en-PK", {
 // extracted, then price the corrected geometry. This talks to routes that
 // read/write a Project's one CadFile — it has no concept of picking a
 // project; the page embedding this decides which project's ID to pass in.
-export function CadReviewPanel({ projectId }: CadReviewPanelProps) {
-  const [geometry, setGeometry] = useState<Geometry | null>(null);
-  const [boq, setBoq] = useState<BOQResult | null>(null);
-  const [status, setStatus] = useState<Status>("idle");
+export function CadReviewPanel({
+  projectId,
+  initialGeometry = null,
+  initialBoq = null,
+  onGeometryUploaded,
+}: CadReviewPanelProps) {
+  const [geometry, setGeometry] = useState<Geometry | null>(initialGeometry);
+  const [boq, setBoq] = useState<BOQResult | null>(initialBoq);
+  const [status, setStatus] = useState<Status>(
+    initialGeometry ? "reviewing" : "idle",
+  );
   const [error, setError] = useState<string | null>(null);
 
   async function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
@@ -58,6 +72,7 @@ export function CadReviewPanel({ projectId }: CadReviewPanelProps) {
       if (!res.ok) throw new Error(body.error ?? "Upload failed.");
       setGeometry(body.geometry as Geometry);
       setStatus("reviewing");
+      onGeometryUploaded?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed.");
       setStatus("idle");

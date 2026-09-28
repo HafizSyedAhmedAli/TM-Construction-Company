@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { CadReviewPanel } from "./CadReviewPanel";
+import { CadReviewPanel } from "./CardReviewPanel";
 
 const GEOMETRY = {
   rooms: [{ id: "r1", name: "Kitchen", area: 240, type: "kitchen" }],
