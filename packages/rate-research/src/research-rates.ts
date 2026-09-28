@@ -4,7 +4,7 @@ import type { Category, RateCardItem } from "@tmcc/shared-types";
 import { RATE_TARGETS } from "./rate-targets";
 import { parseRateResearch, type RateSource } from "./parse-research";
 
-const DEFAULT_RATE_MODEL = "gemini-3.1-flash-lite";
+export const DEFAULT_RATE_MODEL = "gemini-3.1-flash-lite";
 
 // Category → grade guidance is our assumption. TM CC should confirm it.
 const GRADE_HINT: Record<Category, string> = {

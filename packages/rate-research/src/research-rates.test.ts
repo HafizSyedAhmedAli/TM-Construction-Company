@@ -9,7 +9,7 @@ vi.mock("@ai-sdk/google", () => ({
   google: (id: string, s: unknown) => googleMock(id, s),
 }));
 
-import { researchRates } from "./research-rates";
+import { DEFAULT_RATE_MODEL, researchRates } from "./research-rates";
 
 const reply = JSON.stringify([
   {
@@ -43,7 +43,7 @@ describe("researchRates", () => {
       category: "B",
       now: new Date("2026-09-28"),
     });
-    expect(googleMock).toHaveBeenCalledWith("gemini-3.5-flash", {
+    expect(googleMock).toHaveBeenCalledWith(DEFAULT_RATE_MODEL, {
       useSearchGrounding: true,
     });
     expect(r.items).toEqual([
@@ -62,7 +62,7 @@ describe("researchRates", () => {
     });
     process.env.AI_RATE_MODEL = "  ";
     await researchRates({ city: "Karachi", category: "A" });
-    expect(googleMock).toHaveBeenLastCalledWith("gemini-3.5-flash", {
+    expect(googleMock).toHaveBeenLastCalledWith(DEFAULT_RATE_MODEL, {
       useSearchGrounding: true,
     });
   });
