@@ -1,8 +1,11 @@
 // packages/render-engine/src/generate-render.ts
-import { generateText } from "ai";
 import { google } from "@ai-sdk/google";
 import type { Category, Geometry } from "@tmcc/shared-types";
-import { buildRenderPrompt } from "./build-render-prompt";
+import { generateText } from "ai";
+import { buildRenderPrompt, buildTextOnlyRenderPrompt } from "./build-render-prompt";
+import {
+    generateWithCloudflare
+} from "./cloudflare-render";
 import { buildSchematicPng } from "./schematic-png";
 
 export interface GenerateRenderInput {
@@ -34,13 +37,7 @@ export interface GenerateRenderResult {
 // do this as of the AI SDK version pinned in package.json.
 const DEFAULT_IMAGE_MODEL = "gemini-3.1-flash-image";
 
-function resolveModel() {
-  const provider = process.env.AI_IMAGE_PROVIDER?.trim() || "google";
-  if (provider !== "google") {
-    throw new Error(
-      `Unsupported AI_IMAGE_PROVIDER "${provider}" — only "google" (Gemini) is wired up so far.`,
-    );
-  }
+function resolveGoogleModel() {
   return google(process.env.AI_IMAGE_MODEL?.trim() || DEFAULT_IMAGE_MODEL);
 }
 
@@ -53,12 +50,27 @@ export async function generateRender({
   geometry,
   category,
 }: GenerateRenderInput): Promise<GenerateRenderResult> {
-  const promptUsed = buildRenderPrompt(geometry, category);
-  const schematicPng = await buildSchematicPng(geometry);
-  console.log(promptUsed);
+  const provider = process.env.AI_IMAGE_PROVIDER?.trim() || "google";
 
+  if (provider === "cloudflare") {
+    const promptUsed = buildTextOnlyRenderPrompt(geometry, category);
+    console.log(`[render] provider=cloudflare prompt:\n${promptUsed}`);
+    const { image, mimeType } = await generateWithCloudflare({
+      prompt: promptUsed,
+    });
+    return { image, mimeType, promptUsed };
+  }
+
+  if (provider !== "google") {
+    throw new Error(`Unsupported AI_IMAGE_PROVIDER "${provider}".`);
+  }
+
+  const promptUsed = buildRenderPrompt(geometry, category);
+  console.log(`[render] provider=google prompt:\n${promptUsed}`);
+  const schematicPng = await buildSchematicPng(geometry);
+  
   const result = await generateText({
-    model: resolveModel(),
+    model: resolveGoogleModel(),
     providerOptions: {
       google: { responseModalities: ["TEXT", "IMAGE"] },
     },
@@ -79,7 +91,6 @@ export async function generateRender({
       "AI image service returned no image for this render request.",
     );
   }
-
   return {
     image: imageFile.uint8Array,
     mimeType: imageFile.mimeType,

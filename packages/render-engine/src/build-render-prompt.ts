@@ -41,3 +41,26 @@ export function buildRenderPrompt(
     "Keep the render architecturally consistent with the schematic's wall positions — this is a presentation visual, not a floor plan replacement.",
   ].join(" ");
 }
+
+export function buildTextOnlyRenderPrompt(
+  geometry: Geometry,
+  category: Category,
+): string {
+  const xs = geometry.walls.flatMap((w) => [w.startX, w.endX]);
+  const ys = geometry.walls.flatMap((w) => [w.startY, w.endY]);
+  const widthFt = xs.length ? Math.round(Math.max(...xs) - Math.min(...xs)) : 0;
+  const depthFt = ys.length ? Math.round(Math.max(...ys) - Math.min(...ys)) : 0;
+
+  return [
+    "Photorealistic isometric 'dollhouse' cutaway render of a single-storey house, roof and one exterior wall removed, viewed from above at a 3/4 angle so every room's interior is visible at once.",
+    widthFt && depthFt
+      ? `The house footprint is approximately ${widthFt} ft by ${depthFt} ft.`
+      : "",
+    `Rooms: ${describeRooms(geometry)}.`,
+    "Label each room with its name and area in sq ft in clean dark lettering.",
+    `Interior in a ${CATEGORY_FINISH[category]}.`,
+    "Architectural presentation visual, soft daylight, landscaped garden around the house.",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
