@@ -51,15 +51,6 @@ describe("generateRender", () => {
     });
   });
 
-  it("defaults to the google provider and gemini-2.5-flash-image when no env vars are set", async () => {
-    generateTextMock.mockResolvedValue({
-      files: [{ mimeType: "image/png", uint8Array: new Uint8Array() }],
-    });
-
-    await generateRender({ geometry: oneRoom, category: "A" });
-    expect(googleModelMock).toHaveBeenCalledWith("gemini-2.5-flash-image");
-  });
-
   it("respects AI_IMAGE_MODEL when set", async () => {
     process.env.AI_IMAGE_MODEL = "gemini-3-pro-image-preview";
     generateTextMock.mockResolvedValue({
@@ -96,4 +87,21 @@ describe("generateRender", () => {
       generateRender({ geometry: oneRoom, category: "B" }),
     ).rejects.toThrow(/returned no image/);
   });
+});
+
+it("defaults to the google provider and gemini-3.1-flash-image when no env vars are set", async () => {
+  generateTextMock.mockResolvedValue({
+    files: [{ mimeType: "image/png", uint8Array: new Uint8Array() }],
+  });
+  await generateRender({ geometry: oneRoom, category: "A" });
+  expect(googleModelMock).toHaveBeenCalledWith("gemini-3.1-flash-image");
+});
+
+it("treats an empty AI_IMAGE_MODEL as unset", async () => {
+  process.env.AI_IMAGE_MODEL = "   ";
+  generateTextMock.mockResolvedValue({
+    files: [{ mimeType: "image/png", uint8Array: new Uint8Array() }],
+  });
+  await generateRender({ geometry: oneRoom, category: "A" });
+  expect(googleModelMock).toHaveBeenCalledWith("gemini-3.1-flash-image");
 });

@@ -5,6 +5,7 @@ import type {
   BOQLineItem,
   RateItemType,
 } from "@tmcc/shared-types";
+import { brickCount, cementBags, sandCft, steelMaterialTons } from "./material-quantities";
 
 function totalWallFaceArea(geometry: Geometry): number {
   return geometry.walls.reduce(
@@ -48,6 +49,10 @@ const QUANTITY_BASIS: Record<RateItemType, (g: Geometry) => number> = {
   marbleFixing: totalFloorArea,
   woodwork: totalOpeningArea,
   falseCeiling: totalFloorArea,
+  brick: (g) => brickCount(g) / 1000, // priced per 1,000
+  cement: cementBags,
+  sand: sandCft,
+  steelMaterial: steelMaterialTons,
 };
 
 export function calculateBoq(

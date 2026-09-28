@@ -32,14 +32,16 @@ export interface GenerateRenderResult {
 // provider — see https://ai-sdk.dev/providers/ai-sdk-providers/google and
 // https://github.com/vercel/ai/issues/14044 for why generateImage() can't
 // do this as of the AI SDK version pinned in package.json.
+const DEFAULT_IMAGE_MODEL = "gemini-3.1-flash-image";
+
 function resolveModel() {
-  const provider = process.env.AI_IMAGE_PROVIDER ?? "google";
+  const provider = process.env.AI_IMAGE_PROVIDER?.trim() || "google";
   if (provider !== "google") {
     throw new Error(
       `Unsupported AI_IMAGE_PROVIDER "${provider}" — only "google" (Gemini) is wired up so far.`,
     );
   }
-  return google(process.env.AI_IMAGE_MODEL ?? "gemini-2.5-flash-image");
+  return google(process.env.AI_IMAGE_MODEL?.trim() || DEFAULT_IMAGE_MODEL);
 }
 
 // NFR-7: this function is expected to fail sometimes (rate limits, an
@@ -54,7 +56,7 @@ export async function generateRender({
   const promptUsed = buildRenderPrompt(geometry, category);
   const schematicPng = await buildSchematicPng(geometry);
   console.log(promptUsed);
-  
+
   const result = await generateText({
     model: resolveModel(),
     providerOptions: {

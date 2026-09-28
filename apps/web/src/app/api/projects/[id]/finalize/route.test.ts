@@ -8,6 +8,7 @@ vi.mock("@tmcc/db", () => ({
   prisma: {
     project: { findUnique: vi.fn(), update: vi.fn() },
     cadFile: { findUnique: vi.fn(), update: vi.fn() },
+    rateSet: { findFirst: vi.fn().mockResolvedValue(null) },
   },
 }));
 

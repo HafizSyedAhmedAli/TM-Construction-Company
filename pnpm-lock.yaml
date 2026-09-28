@@ -35,6 +35,9 @@ importers:
       '@tmcc/rate-cards':
         specifier: workspace:*
         version: link:../../packages/rate-cards
+      '@tmcc/rate-research':
+        specifier: workspace:*
+        version: link:../../packages/rate-research
       '@tmcc/render-engine':
         specifier: workspace:*
         version: link:../../packages/render-engine
@@ -142,6 +145,22 @@ importers:
       '@tmcc/shared-types':
         specifier: workspace:*
         version: link:../shared-types
+    devDependencies:
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@20.17.6)(jsdom@25.0.1)(lightningcss@1.32.0)
+
+  packages/rate-research:
+    dependencies:
+      '@ai-sdk/google':
+        specifier: ^1.0.0
+        version: 1.2.22(zod@3.25.76)
+      '@tmcc/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
+      ai:
+        specifier: ^4.0.0
+        version: 4.3.19(react@19.3.0)(zod@3.25.76)
     devDependencies:
       vitest:
         specifier: ^2.1.0

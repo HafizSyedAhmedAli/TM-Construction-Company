@@ -77,3 +77,22 @@ model Render {
   promptUsed  String
   generatedAt DateTime @default(now())
 }
+
+// FR-15 / NFR-4: rate cards that office reviews and approves. A BOQ only
+// ever reads APPROVED rows, so totals stay stable and reviewable.
+// status is a plain string like Project.status: DRAFT | APPROVED | REJECTED | SUPERSEDED
+model RateSet {
+  id         String    @id @default(cuid())
+  city       String
+  category   String
+  status     String    @default("DRAFT")
+  origin     String    @default("manual") // manual | gemini
+  taxPercent Float     @default(17)
+  items      Json      // RateCardItem[]
+  sources    Json?     // [{ itemType, sourceUrl, sourceDate, note }] from the AI refresh
+  createdAt  DateTime  @default(now())
+  approvedAt DateTime?
+  approvedBy String?
+
+  @@index([city, category, status])
+}

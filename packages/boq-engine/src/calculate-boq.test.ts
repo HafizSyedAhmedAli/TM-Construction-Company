@@ -197,3 +197,25 @@ describe("calculateBoq — woodwork", () => {
     });
   });
 });
+
+it("prices material lines only when the rate card includes them", () => {
+  const withMaterials: RateCard = {
+    ...hyderabadCategoryB,
+    items: [
+      { itemType: "brick", unitRate: 20000, unit: "1000nos" },
+      { itemType: "cement", unitRate: 1400, unit: "bag" },
+    ],
+  };
+  const result = calculateBoq(oneWallOneRoom, withMaterials);
+  const brick = result.lineItems.find((l) => l.itemType === "brick");
+  expect(brick).toMatchObject({ quantity: 2.7, subtotal: 54000 });
+  expect(result.lineItems.find((l) => l.itemType === "cement")?.quantity).toBe(
+    30,
+  );
+  // existing placeholder cards have no material items -> no material lines
+  expect(
+    calculateBoq(oneWallOneRoom, hyderabadCategoryB).lineItems.some(
+      (l) => l.itemType === "brick",
+    ),
+  ).toBe(false);
+});

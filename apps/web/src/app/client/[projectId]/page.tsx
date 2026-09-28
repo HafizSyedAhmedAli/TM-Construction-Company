@@ -39,6 +39,10 @@ export default async function ClientProjectPage({
     ? (project.cadFile.boq as unknown as BOQResult)
     : null;
 
+  // Real render when one exists, otherwise the demo image so the page is
+  // never empty (e.g. while the AI image service is unavailable).
+  const imageSrc = project.render?.imageUrl ?? "/demo.jpg";
+
   return (
     <main className="min-h-screen px-4 py-12 bg-stone-50">
       <div className="max-w-2xl mx-auto">
@@ -61,28 +65,14 @@ export default async function ClientProjectPage({
         </div>
 
         <div className="bg-white border border-stone-200 rounded-xl shadow-sm overflow-hidden">
-          {project.render ? (
-            /* eslint-disable-next-line @next/next/no-img-element -- served
-               from public/renders and regenerated in place; needs a plain
-               <img>, not next/image's static optimization. */
-            // <img
-            //   src={project.render.imageUrl}
-            //   alt="3D visualization of your house design"
-            //   className="w-full h-auto block"
-            // />
-            <img
-              src="/demo.jfif"
-              alt="3D visualization of your house design"
-              className="w-full h-auto block"
-            />
-          ) : (
-            <div className="aspect-video flex items-center justify-center bg-stone-100">
-              <p className="text-sm text-stone-400 px-6 text-center">
-                Your 3D visualization is being prepared — check back soon, or
-                ask your TM Construction Company representative for an update.
-              </p>
-            </div>
-          )}
+          {/* eslint-disable-next-line @next/next/no-img-element -- served
+              from public/ and regenerated in place; needs a plain <img>,
+              not next/image's static optimization. */}
+          <img
+            src={imageSrc}
+            alt="3D visualization of your house design"
+            className="w-full h-auto block"
+          />
 
           <div className="p-6">
             {boq ? (

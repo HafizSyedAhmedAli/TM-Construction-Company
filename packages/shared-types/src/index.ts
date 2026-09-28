@@ -43,12 +43,17 @@ export type RateItemType =
   | "tileFixing"
   | "marbleFixing"
   | "woodwork"
-  | "falseCeiling";
+  | "falseCeiling"
+  // materials (steelFixing above is labour; steelMaterial is the steel itself)
+  | "brick"
+  | "cement"
+  | "sand"
+  | "steelMaterial";
 
 export interface RateCardItem {
   itemType: RateItemType;
   unitRate: number;
-  unit: "sqft" | "ton" | "bath";
+  unit: "sqft" | "ton" | "bath" | "1000nos" | "bag" | "cft";
 }
 
 export interface RateCard {

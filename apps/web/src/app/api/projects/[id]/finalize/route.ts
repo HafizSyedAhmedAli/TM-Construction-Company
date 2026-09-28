@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type { Geometry } from "@tmcc/shared-types";
 import { estimateFromGeometry } from "@tmcc/rate-cards";
 import { prisma } from "@tmcc/db";
+import { getEffectiveRateCard } from "@/lib/rate-sets";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -22,10 +23,14 @@ export async function POST(_req: NextRequest, { params }: RouteContext) {
       { status: 404 },
     );
 
+  const category = project.category as "A" | "B" | "C";
+  const rateCard = await getEffectiveRateCard(project.city, category);
+
   const boq = estimateFromGeometry({
     geometry: cadFile.geometry as unknown as Geometry,
     city: project.city,
-    category: project.category as "A" | "B" | "C",
+    category,
+    rateCard: rateCard ?? undefined,
   });
 
   if (!boq) {
