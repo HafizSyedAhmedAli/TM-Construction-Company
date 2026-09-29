@@ -3,9 +3,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { POST } from "./route";
 
 vi.mock("@tmcc/db", () => ({ prisma: { rateSet: { create: vi.fn() } } }));
-vi.mock("@tmcc/rate-research", () => ({ researchRates: vi.fn() }));
+vi.mock("@tmcc/rate-research", () => ({ researchCompleteRates: vi.fn() }));
 import { prisma } from "@tmcc/db";
-import { researchRates } from "@tmcc/rate-research";
+import { researchCompleteRates } from "@tmcc/rate-research";
 
 const req = (body: unknown) =>
   new Request("http://localhost/api/rate-sets/refresh", {
@@ -19,18 +19,18 @@ describe("POST /api/rate-sets/refresh", () => {
   it("400s on a bad body without calling Gemini", async () => {
     const res = await POST(req({ city: "", category: "Z" }) as never);
     expect(res.status).toBe(400);
-    expect(researchRates).not.toHaveBeenCalled();
+    expect(researchCompleteRates).not.toHaveBeenCalled();
   });
 
   it("502s and saves nothing when Gemini fails", async () => {
-    vi.mocked(researchRates).mockRejectedValue(new Error("404"));
+    vi.mocked(researchCompleteRates).mockRejectedValue(new Error("404"));
     const res = await POST(req({ city: "Karachi", category: "B" }) as never);
     expect(res.status).toBe(502);
     expect(prisma.rateSet.create).not.toHaveBeenCalled();
   });
 
   it("saves a DRAFT gemini rate set on success", async () => {
-    vi.mocked(researchRates).mockResolvedValue({
+    vi.mocked(researchCompleteRates).mockResolvedValue({
       items: [{ itemType: "cement", unit: "bag", unitRate: 1400 }],
       sources: {
         items: [],

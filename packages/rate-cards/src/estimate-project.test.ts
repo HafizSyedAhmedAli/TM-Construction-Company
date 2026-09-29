@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import type { Geometry } from "@tmcc/shared-types";
 import { estimateFromGeometry } from "./estimate-project";
+import { estimateLead } from "./estimate-lead";
+import { testRateCard } from "./test-rate-card";
 
 const SMALL_HOUSE: Geometry = {
   walls: [
@@ -26,30 +28,25 @@ describe("estimateFromGeometry", () => {
   it("prices a real parsed geometry against a rate card", () => {
     const result = estimateFromGeometry({
       geometry: SMALL_HOUSE,
-      city: "Nawabshah",
-      category: "B",
+      rateCard: testRateCard({ city: "Nawabshah", category: "B" }),
     });
     expect(result).not.toBeNull();
     expect(result!.total).toBeGreaterThan(0);
     expect(result!.tax).toBeCloseTo(result!.subtotal * 0.17, 2);
   });
 
-  it("returns null for a city with no rate card, same convention as estimateLead", () => {
-    expect(
-      estimateFromGeometry({
-        geometry: SMALL_HOUSE,
-        city: "Multan",
-        category: "B",
-      }),
-    ).toBeNull();
+  it("returns null when no rate card is supplied, same convention as estimateLead", () => {
+    expect(estimateFromGeometry({ geometry: SMALL_HOUSE })).toBeNull();
   });
 
-  it("gives a different total than the archetype-based estimate for the same city/category", () => {
+  it("gives a different total than the archetype-based estimate for the same rate card", () => {
+    const rateCard = testRateCard({ city: "Karachi", category: "B" });
     const fromRealGeometry = estimateFromGeometry({
       geometry: SMALL_HOUSE,
-      city: "Karachi",
-      category: "B",
+      rateCard,
     })!;
+    const fromArchetype = estimateLead({ model: 1, rateCard })!;
     expect(fromRealGeometry.total).toBeGreaterThan(0);
+    expect(fromRealGeometry.total).not.toBe(fromArchetype.total);
   });
 });

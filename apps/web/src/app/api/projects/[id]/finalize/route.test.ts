@@ -1,7 +1,7 @@
-// apps/web/src/app/api/projects/[id]/finalize/route.test.ts
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { Geometry } from "@tmcc/shared-types";
+import { RATE_ITEM_TYPES } from "@tmcc/shared-types";
+import type { Category, Geometry, RateCard } from "@tmcc/shared-types";
 import { POST } from "./route";
 
 vi.mock("@tmcc/db", () => ({
@@ -12,8 +12,36 @@ vi.mock("@tmcc/db", () => ({
   },
 }));
 
+vi.mock("@/lib/rate-sets", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/rate-sets")>();
+  return { ...actual, getLiveRateCard: vi.fn() };
+});
+
 import { prisma } from "@tmcc/db";
 import { getLiveRateCard, RateUnavailableError } from "@/lib/rate-sets";
+
+const UNIT: Record<string, RateCard["items"][number]["unit"]> = {
+  steelFixing: "ton",
+  steelMaterial: "ton",
+  sanitary: "bath",
+  brick: "1000nos",
+  cement: "bag",
+  sand: "cft",
+};
+
+// Test-only fixture: the app has no built-in rates, so tests supply their own.
+function liveCard(city: string, category: Category = "B"): RateCard {
+  return {
+    city,
+    category,
+    taxPercent: 17,
+    items: RATE_ITEM_TYPES.map((itemType) => ({
+      itemType,
+      unit: UNIT[itemType] ?? "sqft",
+      unitRate: 100,
+    })),
+  };
+}
 
 function ctx(id: string) {
   return { params: Promise.resolve({ id }) };
