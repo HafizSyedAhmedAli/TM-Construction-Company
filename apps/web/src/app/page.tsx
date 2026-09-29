@@ -31,9 +31,9 @@ export default function HomePage() {
       <Image
         src="/tmcc-logo-full.png"
         alt="TM Construction Company"
-        width={520}
-        height={119}
-        className="h-16 w-auto mb-8"
+        width={2170}
+        height={725}
+        className="h-24 w-auto mb-8"
         priority
       />
 

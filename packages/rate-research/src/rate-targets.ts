@@ -1,5 +1,5 @@
 import type { RateCardItem, RateItemType } from "@tmcc/shared-types";
-import { CORE_MATERIAL_TYPES } from "@tmcc/shared-types";
+import { CORE_MATERIAL_TYPES, isFixedLabourType } from "@tmcc/shared-types";
 
 export interface RateTarget {
   itemType: RateItemType;
@@ -22,7 +22,7 @@ export const RATE_TARGETS: RateTarget[] = [
     itemType: "brick",
     label: "Bricks",
     unit: "1000nos",
-    ask: "price of 1,000 first-class bricks",
+    ask: "price of 1,000 bricks of the target grade (A = first-class, B = second-class/doam, C = third-class)",
     min: 8_000,
     max: 40_000,
   },
@@ -158,11 +158,18 @@ export const RATE_TARGETS: RateTarget[] = [
   },
 ];
 
-export const ALL_RATE_ITEM_TYPES: RateItemType[] = RATE_TARGETS.map(
+// Fixed TMCC labour rates (masonry, plaster, ...) are never searched.
+export const SEARCHED_TARGETS: RateTarget[] = RATE_TARGETS.filter(
+  (t) => !isFixedLabourType(t.itemType),
+);
+
+export const ALL_RATE_ITEM_TYPES: RateItemType[] = SEARCHED_TARGETS.map(
   (t) => t.itemType,
 );
 
 export const MATERIAL_TYPES: RateItemType[] = [...CORE_MATERIAL_TYPES];
 
 export const targetsFor = (types?: readonly RateItemType[]): RateTarget[] =>
-  types ? RATE_TARGETS.filter((t) => types.includes(t.itemType)) : RATE_TARGETS;
+  types
+    ? RATE_TARGETS.filter((t) => types.includes(t.itemType))
+    : SEARCHED_TARGETS;

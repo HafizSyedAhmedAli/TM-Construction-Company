@@ -98,3 +98,47 @@ export interface RateCardItem {
   unitRate: number;
   unit: "sqft" | "ton" | "bath" | "1000nos" | "bag" | "cft";
 }
+
+// Labour rates published by TM Construction Company itself. They are the same
+// in every city, so they are NEVER searched and never vary by location.
+// Source: TMCC "Construction mein mazdoori ke rate" rate sheet.
+export const FIXED_LABOUR_TYPES = [
+  "masonry",
+  "plaster",
+  "shuttering",
+  "steelFixing",
+  "sanitary",
+  "tileFixing",
+  "marbleFixing",
+  "woodwork",
+  "falseCeiling",
+] as const satisfies readonly RateItemType[];
+
+export const isFixedLabourType = (t: RateItemType): boolean =>
+  (FIXED_LABOUR_TYPES as readonly string[]).includes(t);
+
+// The sheet gives false ceiling as a range (Rs 200-350 / sq ft). We map it to
+// the project category: A = 350, B = 275 (midpoint), C = 200. TMCC to confirm.
+const FALSE_CEILING_BY_CATEGORY: Record<Category, number> = {
+  A: 350,
+  B: 275,
+  C: 200,
+};
+
+export function fixedLabourItems(category: Category): RateCardItem[] {
+  return [
+    { itemType: "masonry", unit: "sqft", unitRate: 50 },
+    { itemType: "plaster", unit: "sqft", unitRate: 30 },
+    { itemType: "shuttering", unit: "sqft", unitRate: 45 },
+    { itemType: "steelFixing", unit: "ton", unitRate: 10_000 },
+    { itemType: "sanitary", unit: "bath", unitRate: 12_000 },
+    { itemType: "tileFixing", unit: "sqft", unitRate: 50 },
+    { itemType: "marbleFixing", unit: "sqft", unitRate: 40 },
+    { itemType: "woodwork", unit: "sqft", unitRate: 350 },
+    {
+      itemType: "falseCeiling",
+      unit: "sqft",
+      unitRate: FALSE_CEILING_BY_CATEGORY[category],
+    },
+  ];
+}

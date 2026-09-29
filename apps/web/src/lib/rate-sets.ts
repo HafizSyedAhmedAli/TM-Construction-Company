@@ -4,6 +4,7 @@ import {
   isCompleteRateCard,
   mergeRateCards,
   missingItemTypes,
+  withFixedLabour,
 } from "@tmcc/rate-cards";
 import { researchCompleteRates } from "@tmcc/rate-research";
 import type { Category, RateCard, RateCardItem } from "@tmcc/shared-types";
@@ -77,13 +78,14 @@ async function resolveLiveRateCard(
     orderBy: { approvedAt: "desc" },
   });
 
+  // TMCC's fixed labour rates always overlay whatever was saved earlier.
   const existing: RateCard | undefined = row
-    ? {
+    ? withFixedLabour({
         city,
         category,
         taxPercent: row.taxPercent,
         items: row.items as unknown as RateCardItem[],
-      }
+      })
     : undefined;
 
   const ageMs = row?.approvedAt
@@ -119,9 +121,10 @@ async function resolveLiveRateCard(
     taxPercent: taxPercent(),
     items: researched.items,
   };
-  const card = onlyGaps
-    ? (mergeRateCards(fromSearch, existing) as RateCard)
-    : fromSearch;
+
+  const card = withFixedLabour(
+    onlyGaps ? (mergeRateCards(fromSearch, existing) as RateCard) : fromSearch,
+  );
 
   try {
     await saveAutoRateSet(city, category, card, researched.sources);

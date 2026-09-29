@@ -1,21 +1,26 @@
 import { generateText } from "ai";
 import { google } from "@ai-sdk/google";
 import type { Category, RateCardItem, RateItemType } from "@tmcc/shared-types";
+import { isFixedLabourType } from "@tmcc/shared-types";
 import {
   ALL_RATE_ITEM_TYPES,
   MATERIAL_TYPES,
   targetsFor,
   type RateTarget,
 } from "./rate-targets";
-import { parseRateResearch, type RateSource } from "./parse-research";
+import {
+  parseRateResearch,
+  type ParsedRates,
+  type RateSource,
+} from "./parse-research";
 
 export const DEFAULT_RATE_MODEL = "gemini-3.1-flash-lite";
 
 // Category → grade guidance is our assumption. TM CC should confirm it.
 const GRADE_HINT: Record<Category, string> = {
-  A: "premium grade (well-known branded cement, first-class bricks, premium finishes)",
-  B: "standard grade",
-  C: "economy grade",
+  A: "premium grade (well-known branded cement, A-class / first-class bricks, premium finishes)",
+  B: 'standard grade (B-class / second-class "doam" bricks, standard cement brands)',
+  C: "economy grade (C-class / third-class bricks, budget cement brands)",
 };
 
 export interface ResearchSources {
@@ -44,13 +49,39 @@ export function buildRatePrompt(
     )
     .join("\n");
   return [
-    `Today is ${today}. Use web search to find CURRENT construction rates in ${city}, Pakistan (if ${city} has no local listing, use the nearest major market and say so in "note").`,
+    `Today is ${today}. Use web search to find CURRENT construction material and works rates in ${city}, Pakistan. If ${city} has no local listing, use the nearest major market (or a Pakistan-wide price from a rate site such as materialrate.pk or civilconstructionguide.com) and say so in "note". A national or nearby-city price is acceptable; do not give up just because ${city} is not listed by name.`,
     `Target grade: ${GRADE_HINT[category]}.`,
     `Find:\n${asks}`,
-    `Reply with ONLY a JSON array, no prose. Each element:`,
+    `Your ENTIRE reply must be a single JSON array and nothing else: no prose, no explanation, no markdown headings. Each element:`,
     `{"itemType": string, "price": number, "sourceName": string, "sourceUrl": string, "sourceDate": "YYYY-MM-DD", "note": string}`,
-    `Rules: use a price you actually found on a page and cite that page. If you cannot find a price, omit the item. Never estimate or average from memory.`,
+    `Rules: "price" is a plain number in PKR (no commas, no "Rs"). If a source gives a range, use its midpoint and say so in "note". Use a price you actually found on a page and cite that page. If you cannot find a price for an item, omit that item; if you find none at all, reply with []. Never estimate from memory.`,
   ].join("\n\n");
+}
+
+// Gemini with search grounding sometimes answers in prose even when told to
+// return JSON. Rather than fail, ask the model once (without search) to turn
+// its own findings into the JSON array.
+async function parseWithRepair(
+  text: string,
+  now: Date,
+  targets: RateTarget[],
+  modelId: string,
+): Promise<ParsedRates> {
+  try {
+    return parseRateResearch(text, now, targets);
+  } catch {
+    const itemTypes = targets.map((t) => `"${t.itemType}"`).join(", ");
+    const repaired = await generateText({
+      model: google(modelId),
+      prompt: [
+        `Convert the findings below into a JSON array. Reply with ONLY the JSON array, no prose, no markdown.`,
+        `Each element: {"itemType": one of ${itemTypes}, "price": number in PKR, "sourceName": string, "sourceUrl": string, "sourceDate": "YYYY-MM-DD" or "", "note": string}`,
+        `Only include items whose price is actually stated in the findings. If there are none, reply with [].`,
+        `FINDINGS:\n${text}`,
+      ].join("\n\n"),
+    });
+    return parseRateResearch(repaired.text, now, targets);
+  }
 }
 
 export async function researchRates(input: {
@@ -75,7 +106,7 @@ export async function researchRates(input: {
     prompt: promptUsed,
   });
 
-  const parsed = parseRateResearch(result.text, now, targets);
+  const parsed = await parseWithRepair(result.text, now, targets, modelId);
   if (parsed.items.length === 0) {
     throw new Error(
       `Gemini found no usable prices for ${input.city}. ${parsed.warnings.join("; ")}`,
@@ -136,7 +167,24 @@ export async function researchCompleteRates(input: {
   now?: Date;
   itemTypes?: readonly RateItemType[];
 }): Promise<ResearchResult> {
-  const wanted = input.itemTypes ?? ALL_RATE_ITEM_TYPES;
+  // Fixed TMCC labour rates are never searched, even if asked for.
+  const wanted = (input.itemTypes ?? ALL_RATE_ITEM_TYPES).filter(
+    (t) => !isFixedLabourType(t),
+  );
+  if (wanted.length === 0) {
+    const now = input.now ?? new Date();
+    return {
+      items: [],
+      promptUsed: "",
+      sources: {
+        items: [],
+        grounding: [],
+        warnings: [],
+        model: process.env.AI_RATE_MODEL?.trim() || DEFAULT_RATE_MODEL,
+        searchedAt: now.toISOString(),
+      },
+    };
+  }
   const materials = wanted.filter((t) => MATERIAL_TYPES.includes(t));
   const works = wanted.filter((t) => !MATERIAL_TYPES.includes(t));
   const base = { city: input.city, category: input.category, now: input.now };

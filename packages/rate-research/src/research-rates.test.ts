@@ -80,3 +80,24 @@ describe("researchRates", () => {
     ).rejects.toThrow(/no usable prices/);
   });
 });
+
+describe("researchRates prose recovery", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    generateTextMock.mockReset();
+  });
+
+  it("asks the model to reformat when the reply has no JSON array", async () => {
+    generateTextMock
+      .mockResolvedValueOnce({
+        text: "I found cement at Rs 1,400 per bag on example.com.",
+        sources,
+      })
+      .mockResolvedValueOnce({ text: reply, sources: [] });
+    const r = await researchRates({ city: "Hyderabad", category: "B" });
+    expect(generateTextMock).toHaveBeenCalledTimes(2);
+    expect(r.items).toEqual([
+      { itemType: "cement", unit: "bag", unitRate: 1400 },
+    ]);
+  });
+});

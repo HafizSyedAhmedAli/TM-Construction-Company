@@ -59,30 +59,6 @@ export function ProjectWorkspace({
           onRenderChange={() => setHasRender(true)}
         />
       </div>
-
-      {hasBoq && (
-        <section className="print:hidden border-t border-stone-200 pt-8">
-          <h2 className="text-lg font-semibold text-brand-black mb-3">
-            Present to the client
-          </h2>
-          <div className="flex flex-wrap gap-3">
-            <Link
-              href={`/client/${projectId}`}
-              target="_blank"
-              className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark"
-            >
-              Open client page →
-            </Link>
-            <Link
-              href={`/office/${projectId}/boq`}
-              target="_blank"
-              className="rounded-lg border border-stone-300 px-4 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50"
-            >
-              Printable BOQ (PDF) →
-            </Link>
-          </div>
-        </section>
-      )}
     </div>
   );
 }
