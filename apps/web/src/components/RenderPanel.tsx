@@ -14,6 +14,8 @@ interface RenderPanelProps {
   /** False until a CAD file has been uploaded — the render route 404s without one. */
   hasCadFile: boolean;
   initialRender?: RenderState | null;
+  /** Called after a render is generated, so the parent can update progress. */
+  onRenderChange?: (render: RenderState) => void;
 }
 
 type Status = "idle" | "generating" | "error";
@@ -26,6 +28,7 @@ export function RenderPanel({
   projectId,
   hasCadFile,
   initialRender = null,
+  onRenderChange,
 }: RenderPanelProps) {
   const [render, setRender] = useState<RenderState | null>(initialRender);
   const [status, setStatus] = useState<Status>("idle");
@@ -42,6 +45,7 @@ export function RenderPanel({
       const body = await res.json();
       if (!res.ok) throw new Error(body.error ?? "Render generation failed.");
       setRender(body as RenderState);
+      onRenderChange?.(body as RenderState);
       setStatus("idle");
     } catch (err) {
       setError(

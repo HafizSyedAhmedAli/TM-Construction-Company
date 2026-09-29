@@ -7,6 +7,7 @@ import {
   type LeadIntakeInput,
 } from "@tmcc/lead-intake";
 import type { BOQResult } from "@tmcc/shared-types";
+import { estimateRange } from "@/lib/boq-format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -62,15 +63,15 @@ export function IntakeForm({ onSubmit }: IntakeFormProps) {
         {result.estimate ? (
           <div className="mt-5 border-t border-stone-200 pt-5">
             <p className="text-sm text-stone-500 mb-1">
-              Rough starting estimate for your area and category
+              Rough starting range for your area and category
             </p>
             <p className="text-2xl font-bold text-brand-black">
-              {currency.format(result.estimate.total)}
+              {estimateRange(result.estimate.total)}
             </p>
             <p className="text-xs text-stone-400 mt-2">
-              A ballpark based on a typical project of this size — not a final
-              quote. Your actual BOQ will follow once we've reviewed your plot
-              and drawings.
+              A ballpark for a typical house of this size — not a quote. Your
+              exact BOQ will follow once we have reviewed your plot and
+              drawings.
             </p>
           </div>
         ) : (

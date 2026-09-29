@@ -8,3 +8,12 @@
   --color-brand-gray: #7a757b;
   --color-brand-black: #231f1e;
 }
+
+@media print {
+  body {
+    background: white !important;
+  }
+  @page {
+    margin: 12mm;
+  }
+}

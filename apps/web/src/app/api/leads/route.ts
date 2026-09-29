@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { validateLeadIntake } from "@tmcc/lead-intake";
 import { estimateLead } from "@tmcc/rate-cards";
 import { prisma } from "@tmcc/db";
+import { getEffectiveRateCard } from "@/lib/rate-sets";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -14,10 +15,17 @@ export async function POST(req: NextRequest) {
     data: { ...body, source: "FORM" },
   });
 
+  // Use approved rates when office has any; never let a rate lookup failure
+  // block lead capture.
+  const rateCard = await getEffectiveRateCard(body.city, body.category).catch(
+    () => null,
+  );
+
   const estimate = estimateLead({
     city: body.city,
     category: body.category,
     model: body.model,
+    rateCard: rateCard ?? undefined,
   });
 
   // Flat shape on purpose: keeps `json.id` etc. working for any existing

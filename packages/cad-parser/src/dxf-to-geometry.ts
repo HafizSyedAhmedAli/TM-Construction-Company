@@ -6,7 +6,13 @@ import type {
   RoomType,
   Wall,
 } from "@tmcc/shared-types";
-import { distance, pointInPolygon, polygonArea, type Point2D } from "./polygon";
+import {
+  dedupeSegments,
+  roomsFromWallSegments,
+  segmentsToWalls,
+  type Seg,
+} from "./line-plan";
+import { Point2D, distance, pointInPolygon, polygonArea } from "./polygon";
 
 // --- Layer conventions this parser expects the CAD file to follow ---
 // A client's actual drawings may use different layer names; treat these
@@ -22,7 +28,8 @@ export const WINDOW_LAYER = "WINDOWS";
 // real wall/opening heights are captured (DXF is inherently 2D — a plan
 // view carries no height information at all).
 export const WALL_HEIGHT_FT = 10;
-export const WALL_THICKNESS_FT = 0.75;
+export const WALL_THICKNESS_FT = 0.75; // 9 in exterior wall
+export const PARTITION_THICKNESS_FT = 0.375; // 4.5 in interior partition
 export const DOOR_HEIGHT_FT = 7;
 export const WINDOW_HEIGHT_FT = 4;
 
@@ -79,20 +86,72 @@ function cleanRoomName(label: string): string {
   return label.replace(/\s*\d+(\.\d+)?\s*sq\s*\.?\s*ft\.?\s*$/i, "").trim();
 }
 
+// Accept WALL/WALLS, DOOR/DOORS, WINDOW/WINDOWS in any case.
+function layerKind(layer: string): "wall" | "door" | "window" | null {
+  const l = (layer ?? "").trim().toLowerCase();
+  if (/^walls?$/.test(l)) return "wall";
+  if (/^doors?$/.test(l)) return "door";
+  if (/^windows?$/.test(l)) return "window";
+  return null;
+}
+
 export function dxfToGeometry(dxf: RawDxfDocument): Geometry {
   const roomPolylines = dxf.entities.filter(
     (e): e is RawPolylineEntity =>
-      e.type === "LWPOLYLINE" && e.layer === WALL_LAYER,
+      e.type === "LWPOLYLINE" && layerKind(e.layer) === "wall",
   );
   const labels = dxf.entities.filter(
-    (e): e is RawTextEntity => e.type === "TEXT",
+    (e): e is RawTextEntity =>
+      e.type === "TEXT" &&
+      layerKind(e.layer) === null &&
+      !/^dim/i.test(e.layer ?? ""),
   );
   const doorLines = dxf.entities.filter(
-    (e): e is RawLineEntity => e.type === "LINE" && e.layer === DOOR_LAYER,
+    (e): e is RawLineEntity =>
+      e.type === "LINE" && layerKind(e.layer) === "door",
   );
   const windowLines = dxf.entities.filter(
-    (e): e is RawLineEntity => e.type === "LINE" && e.layer === WINDOW_LAYER,
+    (e): e is RawLineEntity =>
+      e.type === "LINE" && layerKind(e.layer) === "window",
   );
+  const wallLines = dxf.entities.filter(
+    (e): e is RawLineEntity =>
+      e.type === "LINE" && layerKind(e.layer) === "wall",
+  );
+
+  // Drawings made of separate wall LINEs (most real plans) instead of one
+  // closed polyline per room.
+  if (roomPolylines.length === 0 && wallLines.length > 0) {
+    const segs: Seg[] = dedupeSegments(
+      wallLines.map((l) => ({
+        x1: l.vertices[0].x,
+        y1: l.vertices[0].y,
+        x2: l.vertices[1].x,
+        y2: l.vertices[1].y,
+      })),
+    );
+    const openings: Opening[] = [
+      ...doorLines.map((l, i) => toOpening(l, i, "door", DOOR_HEIGHT_FT)),
+      ...windowLines.map((l, i) => toOpening(l, i, "window", WINDOW_HEIGHT_FT)),
+    ];
+    return {
+      walls: segmentsToWalls(
+        segs,
+        WALL_HEIGHT_FT,
+        WALL_THICKNESS_FT,
+        PARTITION_THICKNESS_FT,
+      ),
+      rooms: roomsFromWallSegments(
+        segs,
+        labels.map((l) => ({
+          x: l.startPoint.x,
+          y: l.startPoint.y,
+          text: l.text,
+        })),
+      ),
+      openings,
+    };
+  }
 
   const walls: Wall[] = [];
   const rooms: Room[] = [];

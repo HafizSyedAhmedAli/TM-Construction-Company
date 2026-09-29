@@ -15,6 +15,8 @@ import {
   NativeSelect,
   NativeSelectOption,
 } from "@/components/ui/native-select";
+import Link from "next/link";
+import { BoqTable } from "./BoqTable";
 
 interface CadReviewPanelProps {
   projectId: string;
@@ -25,15 +27,11 @@ interface CadReviewPanelProps {
   /** Called after a successful upload so the parent (which owns the
    * render-availability check) knows a CAD file now exists. */
   onGeometryUploaded?: () => void;
+  /** Called whenever the BOQ is calculated (BOQResult) or invalidated (null). */
+  onBoqChange?: (boq: BOQResult | null) => void;
 }
 
 type Status = "idle" | "uploading" | "reviewing" | "saving" | "calculating";
-
-const currency = new Intl.NumberFormat("en-PK", {
-  style: "currency",
-  currency: "PKR",
-  maximumFractionDigits: 0,
-});
 
 // FR-8/9/10/11/12/13: upload a DXF, let office staff correct what the parser
 // extracted, then price the corrected geometry. This talks to routes that
@@ -44,6 +42,7 @@ export function CadReviewPanel({
   initialGeometry = null,
   initialBoq = null,
   onGeometryUploaded,
+  onBoqChange,
 }: CadReviewPanelProps) {
   const [geometry, setGeometry] = useState<Geometry | null>(initialGeometry);
   const [boq, setBoq] = useState<BOQResult | null>(initialBoq);
@@ -59,6 +58,7 @@ export function CadReviewPanel({
     setStatus("uploading");
     setError(null);
     setBoq(null);
+    onBoqChange?.(null);
 
     const formData = new FormData();
     formData.append("file", file);
@@ -121,6 +121,7 @@ export function CadReviewPanel({
       const body = await res.json();
       if (!res.ok) throw new Error(body.error ?? "Could not save corrections.");
       setBoq(null); // a correction invalidates any BOQ already on screen
+      onBoqChange?.(null);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Could not save corrections.",
@@ -142,6 +143,7 @@ export function CadReviewPanel({
       if (!res.ok)
         throw new Error(body.error ?? "Could not calculate the BOQ.");
       setBoq(body.boq as BOQResult);
+      onBoqChange?.(body.boq as BOQResult);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Could not calculate the BOQ.",
@@ -167,7 +169,8 @@ export function CadReviewPanel({
           <p className="text-xs text-stone-400 mt-1.5">Parsing drawing…</p>
         )}
         <p className="text-xs text-stone-400 mt-1.5">
-          .dwg isn&apos;t supported yet — export the plan as .dxf first (FR-8).
+          Export the plan from AutoCAD as .dxf (.dwg conversion is not available
+          yet). Units are detected automatically (mm, cm, m, ft).
         </p>
       </div>
 
@@ -186,6 +189,40 @@ export function CadReviewPanel({
               double-check the file, or correct the quantities manually below.
             </p>
           )}
+
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">
+            {[
+              ["Rooms", geometry.rooms.length],
+              [
+                "Bathrooms",
+                geometry.rooms.filter((r) => r.type === "bathroom").length,
+              ],
+              [
+                "Covered area",
+                `${Math.round(geometry.rooms.reduce((s, r) => s + r.area, 0)).toLocaleString("en-PK")} sq ft`,
+              ],
+              [
+                "Wall length",
+                `${Math.round(geometry.walls.reduce((s, w) => s + w.length, 0)).toLocaleString("en-PK")} ft`,
+              ],
+              [
+                "Doors / windows",
+                `${geometry.openings.filter((o) => o.type === "door").length} / ${geometry.openings.filter((o) => o.type === "window").length}`,
+              ],
+            ].map(([label, value]) => (
+              <div
+                key={label as string}
+                className="rounded-lg border border-stone-200 bg-white px-2 py-2"
+              >
+                <p className="text-[11px] uppercase tracking-wide text-stone-400">
+                  {label}
+                </p>
+                <p className="text-sm font-semibold text-brand-black">
+                  {value}
+                </p>
+              </div>
+            ))}
+          </div>
 
           <section>
             <h3 className="text-sm font-semibold text-brand-black mb-2">
@@ -264,14 +301,13 @@ export function CadReviewPanel({
                 <tbody>
                   {geometry.walls.map((wall, i) => (
                     <tr key={wall.id} className="border-t border-stone-100">
-                      <td className="px-3 py-1.5 text-stone-500">{wall.id}</td>
                       <td className="px-3 py-1.5">
                         <Input
-                          aria-label={`Wall ${i + 1} length`}
+                          aria-label={`Wall ${i + 1} height`}
                           type="number"
-                          value={wall.length}
+                          value={wall.height}
                           onChange={(e) =>
-                            updateWall(i, { length: Number(e.target.value) })
+                            updateWall(i, { height: Number(e.target.value) })
                           }
                         />
                       </td>
@@ -307,48 +343,28 @@ export function CadReviewPanel({
 
       {boq && (
         <section className="border-t border-stone-200 pt-5">
-          <h3 className="text-sm font-semibold text-brand-black mb-2">
-            Bill of Quantities
-          </h3>
-          <div className="overflow-x-auto border border-stone-200 rounded-lg">
-            <table className="w-full text-sm">
-              <thead className="bg-stone-50 text-stone-500 text-xs uppercase">
-                <tr>
-                  <th className="text-left px-3 py-2">Item</th>
-                  <th className="text-left px-3 py-2">Quantity</th>
-                  <th className="text-left px-3 py-2">Rate</th>
-                  <th className="text-left px-3 py-2">Subtotal</th>
-                </tr>
-              </thead>
-              <tbody>
-                {boq.lineItems.map((item) => (
-                  <tr key={item.itemType} className="border-t border-stone-100">
-                    <td className="px-3 py-1.5 capitalize">{item.itemType}</td>
-                    <td className="px-3 py-1.5">
-                      {item.quantity.toFixed(1)} {item.unit}
-                    </td>
-                    <td className="px-3 py-1.5">
-                      {currency.format(item.unitRate)}
-                    </td>
-                    <td className="px-3 py-1.5">
-                      {currency.format(item.subtotal)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <h3 className="text-sm font-semibold text-brand-black">
+              Bill of Quantities
+            </h3>
+            <div className="flex gap-2 text-sm">
+              <Link
+                href={`/office/${projectId}/boq`}
+                target="_blank"
+                className="rounded-lg border border-stone-300 px-3 py-1.5 font-medium text-stone-700 hover:bg-stone-50"
+              >
+                Print / Save PDF
+              </Link>
+              <Link
+                href={`/client/${projectId}`}
+                target="_blank"
+                className="rounded-lg bg-brand px-3 py-1.5 font-medium text-white hover:bg-brand-dark"
+              >
+                Client view
+              </Link>
+            </div>
           </div>
-          <div className="mt-3 text-right space-y-0.5">
-            <p className="text-sm text-stone-500">
-              Subtotal: {currency.format(boq.subtotal)}
-            </p>
-            <p className="text-sm text-stone-500">
-              Tax: {currency.format(boq.tax)}
-            </p>
-            <p className="text-lg font-bold text-brand-black">
-              Total: {currency.format(boq.total)}
-            </p>
-          </div>
+          <BoqTable boq={boq} />
         </section>
       )}
     </div>

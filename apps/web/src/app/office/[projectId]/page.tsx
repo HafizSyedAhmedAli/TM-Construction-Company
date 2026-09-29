@@ -25,6 +25,15 @@ export default async function OfficeProjectPage({
 
   if (!project) notFound();
 
+  const approvedRates = await prisma.rateSet.findFirst({
+    where: {
+      city: project.city,
+      category: project.category,
+      status: "APPROVED",
+    },
+    orderBy: { approvedAt: "desc" },
+  });
+
   return (
     <main className="min-h-screen px-4 py-12">
       <div className="max-w-3xl mx-auto">
@@ -32,15 +41,12 @@ export default async function OfficeProjectPage({
           <h1 className="text-2xl font-bold text-brand-black">
             {project.lead.name}
           </h1>
-          {project.render && (
-            <Link
-              href={`/client/${project.id}`}
-              target="_blank"
-              className="text-sm font-medium text-brand hover:text-brand-dark whitespace-nowrap"
-            >
-              View client-facing page →
-            </Link>
-          )}
+          <Link
+            href="/office"
+            className="text-sm font-medium text-stone-500 hover:text-brand whitespace-nowrap"
+          >
+            ← All projects
+          </Link>
         </div>
         <p className="text-sm text-stone-500 mb-8">
           Project <span className="font-mono">{project.id}</span> ·{" "}
@@ -49,6 +55,29 @@ export default async function OfficeProjectPage({
           {project.category} · Status{" "}
           <span className="font-medium text-stone-700">{project.status}</span>
         </p>
+
+        <div className="mb-6 rounded-lg border border-stone-200 bg-white px-4 py-3 text-sm flex flex-wrap items-center justify-between gap-2">
+          <p className="text-stone-600">
+            <span className="font-medium text-brand-black">Rates applied:</span>{" "}
+            {project.city} · Category {project.category} ·{" "}
+            {approvedRates
+              ? `market rates approved ${approvedRates.approvedAt?.toISOString().slice(0, 10)} by ${approvedRates.approvedBy}`
+              : "TM CC standard rate list (no market-rate refresh approved yet)"}
+          </p>
+          <Link
+            href="/office/rates"
+            className="font-medium text-brand hover:text-brand-dark whitespace-nowrap"
+          >
+            Manage rates →
+          </Link>
+        </div>
+
+        {project.meetingNotes && (
+          <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <span className="font-medium">Meeting notes:</span>{" "}
+            {project.meetingNotes}
+          </div>
+        )}
 
         <ProjectWorkspace
           projectId={project.id}

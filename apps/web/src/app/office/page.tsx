@@ -2,7 +2,11 @@
 import Link from "next/link";
 import { prisma, type Project, type Lead, type Render } from "@tmcc/db";
 
-type ProjectWithLead = Project & { lead: Lead; render: Render | null };
+type ProjectWithLead = Project & {
+  lead: Lead;
+  render: Render | null;
+  cadFile: { boq: unknown } | null;
+};
 
 const STATUS_STYLES: Record<string, string> = {
   NEW: "bg-stone-100 text-stone-600",
@@ -14,7 +18,7 @@ export default async function OfficeProjectsPage() {
   const [projects, pendingLeadCount] = await Promise.all([
     prisma.project.findMany({
       orderBy: { createdAt: "desc" },
-      include: { lead: true, render: true },
+      include: { lead: true, render: true, cadFile: true },
     }),
     prisma.lead.count({ where: { projects: { none: {} } } }),
   ]);
@@ -59,6 +63,16 @@ export default async function OfficeProjectsPage() {
                     {project.render && " · render ready"}
                   </p>
                 </div>
+                {(project.cadFile?.boq as { total?: number } | null)?.total && (
+                  <span className="text-sm font-semibold text-brand-black whitespace-nowrap">
+                    Rs{" "}
+                    {new Intl.NumberFormat("en-PK", {
+                      maximumFractionDigits: 0,
+                    }).format(
+                      (project.cadFile!.boq as { total: number }).total,
+                    )}
+                  </span>
+                )}
                 <span
                   className={`text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap ${
                     STATUS_STYLES[project.status] ??

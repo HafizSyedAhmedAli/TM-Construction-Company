@@ -1,32 +1,36 @@
 // packages/rate-cards/src/reference-geometry.ts
-import type { Geometry } from "@tmcc/shared-types";
-import type { EngagementModel } from "@tmcc/shared-types";
+import type { EngagementModel, Geometry } from "@tmcc/shared-types";
 
-// Stand-in for real CAD output (FR-8/FR-9, not built yet). A rough
-// small/medium/large house archetype per engagement model, ONLY for
-// giving the lead an instant ballpark on the intake form — never present
-// this as a final BOQ. Replace the lookup with actual parsed geometry
-// once CAD upload lands; the calculateBoq call itself doesn't change.
+// Stand-in for real CAD output, ONLY for the instant ballpark on the intake
+// form: four exterior walls, interior partitions ~90% of the perimeter,
+// about one door per 150 sqft and one window per 120 sqft.
 export const REFERENCE_GEOMETRY: Record<EngagementModel, Geometry> = {
-  1: houseArchetype(1200), // Model 1: TM CC builds to sell — smaller unit
-  2: houseArchetype(1800), // Model 2: client's plot, standard build
-  3: houseArchetype(2400), // Model 3: client's plot + budget, larger build
+  1: houseArchetype(1200),
+  2: houseArchetype(1800),
+  3: houseArchetype(2400),
 };
 
 function houseArchetype(builtUpSqft: number): Geometry {
-  const perimeter = Math.sqrt(builtUpSqft) * 4;
+  const side = Math.sqrt(builtUpSqft);
+  const wall = (id: string, length: number, thickness: number) => ({
+    id,
+    startX: 0,
+    startY: 0,
+    endX: length,
+    endY: 0,
+    length,
+    height: 10,
+    thickness,
+  });
+  const doors = Math.round(builtUpSqft / 150);
+  const windows = Math.round(builtUpSqft / 120);
   return {
     walls: [
-      {
-        id: "w1",
-        startX: 0,
-        startY: 0,
-        endX: perimeter / 4,
-        endY: 0,
-        length: perimeter / 4,
-        height: 10,
-        thickness: 0.75,
-      },
+      wall("e1", side, 0.75),
+      wall("e2", side, 0.75),
+      wall("e3", side, 0.75),
+      wall("e4", side, 0.75),
+      wall("p1", side * 4 * 0.9, 0.375),
     ],
     rooms: [
       {
@@ -50,8 +54,18 @@ function houseArchetype(builtUpSqft: number): Geometry {
       },
     ],
     openings: [
-      { id: "o1", type: "door", width: 3, height: 7 },
-      { id: "o2", type: "window", width: 4, height: 4 },
+      ...Array.from({ length: doors }, (_, i) => ({
+        id: `d${i}`,
+        type: "door" as const,
+        width: 3,
+        height: 7,
+      })),
+      ...Array.from({ length: windows }, (_, i) => ({
+        id: `w${i}`,
+        type: "window" as const,
+        width: 4,
+        height: 4,
+      })),
     ],
   };
 }

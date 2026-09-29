@@ -1,54 +1,51 @@
 import type {
+  BOQLineItem,
+  BOQResult,
+  Category,
   Geometry,
   RateCard,
-  BOQResult,
-  BOQLineItem,
   RateItemType,
 } from "@tmcc/shared-types";
-import { brickCount, cementBags, sandCft, steelMaterialTons } from "./material-quantities";
+import {
+  brickCount,
+  cementBags,
+  dryRoomArea,
+  floorArea,
+  netWallArea,
+  openingArea,
+  plasterArea,
+  sandCft,
+  steelMaterialTons,
+  wetRoomArea,
+} from "./material-quantities";
 
-function totalWallFaceArea(geometry: Geometry): number {
-  return geometry.walls.reduce(
-    (sum, wall) => sum + wall.length * wall.height,
-    0,
-  );
-}
+const bathroomCount = (g: Geometry) =>
+  g.rooms.filter((r) => r.type === "bathroom").length;
 
-function totalFloorArea(geometry: Geometry): number {
-  return geometry.rooms.reduce((sum, room) => sum + room.area, 0);
-}
+// Category A houses get marble in living areas; B and C get tiles there.
+// Kitchens and bathrooms are always tiled. Each floor area is charged ONCE.
+const marbleArea = (g: Geometry, c: Category) =>
+  c === "A" ? dryRoomArea(g) : 0;
+const tileArea = (g: Geometry, c: Category) =>
+  c === "A" ? wetRoomArea(g) : floorArea(g);
 
-// Assumption, not a physical constant — a commonly used residential RCC
-// rule-of-thumb (kg of reinforcement steel per sqft of built-up floor area).
-// Confirm against TM CC's own engineering standard before relying on this
-// for a real client-facing quote.
-const STEEL_KG_PER_SQFT = 4;
-
-function steelTonnage(geometry: Geometry): number {
-  return (totalFloorArea(geometry) * STEEL_KG_PER_SQFT) / 1000;
-}
-
-function bathroomCount(geometry: Geometry): number {
-  return geometry.rooms.filter((room) => room.type === "bathroom").length;
-}
-
-function totalOpeningArea(geometry: Geometry): number {
-  return geometry.openings.reduce(
-    (sum, opening) => sum + opening.width * opening.height,
-    0,
-  );
-}
-
-const QUANTITY_BASIS: Record<RateItemType, (g: Geometry) => number> = {
-  masonry: totalWallFaceArea,
-  plaster: (g) => totalWallFaceArea(g) * 2,
-  shuttering: totalWallFaceArea,
-  steelFixing: steelTonnage,
+const QUANTITY_BASIS: Record<
+  RateItemType,
+  (g: Geometry, category: Category) => number
+> = {
+  masonry: netWallArea,
+  plaster: plasterArea,
+  shuttering: floorArea, // roof-slab centering
+  steelFixing: steelMaterialTons, // labour on the same tonnage of steel
   sanitary: bathroomCount,
-  tileFixing: totalFloorArea,
-  marbleFixing: totalFloorArea,
-  woodwork: totalOpeningArea,
-  falseCeiling: totalFloorArea,
+  tileFixing: tileArea,
+  marbleFixing: marbleArea,
+  woodwork: openingArea,
+  falseCeiling: dryRoomArea,
+  foundation: floorArea,
+  rccRoof: floorArea,
+  electrical: floorArea,
+  paint: (g) => plasterArea(g) + floorArea(g), // walls (both faces) + ceilings
   brick: (g) => brickCount(g) / 1000, // priced per 1,000
   cement: cementBags,
   sand: sandCft,
@@ -61,7 +58,10 @@ export function calculateBoq(
 ): BOQResult {
   const lineItems: BOQLineItem[] = rateCard.items
     .map((rateItem) => {
-      const quantity = QUANTITY_BASIS[rateItem.itemType](geometry);
+      const quantity = QUANTITY_BASIS[rateItem.itemType](
+        geometry,
+        rateCard.category,
+      );
       return {
         itemType: rateItem.itemType,
         quantity,
@@ -74,6 +74,5 @@ export function calculateBoq(
 
   const subtotal = lineItems.reduce((sum, item) => sum + item.subtotal, 0);
   const tax = subtotal * (rateCard.taxPercent / 100);
-
   return { lineItems, subtotal, tax, total: subtotal + tax };
 }

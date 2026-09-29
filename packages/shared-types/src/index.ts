@@ -44,7 +44,10 @@ export type RateItemType =
   | "marbleFixing"
   | "woodwork"
   | "falseCeiling"
-  // materials (steelFixing above is labour; steelMaterial is the steel itself)
+  | "foundation"
+  | "rccRoof"
+  | "electrical"
+  | "paint"
   | "brick"
   | "cement"
   | "sand"

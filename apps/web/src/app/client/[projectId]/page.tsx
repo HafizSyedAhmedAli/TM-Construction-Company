@@ -3,12 +3,8 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import type { BOQResult } from "@tmcc/shared-types";
 import { prisma } from "@tmcc/db";
-
-const currency = new Intl.NumberFormat("en-PK", {
-  style: "currency",
-  currency: "PKR",
-  maximumFractionDigits: 0,
-});
+import { PrintButton } from "@/components/PrintButton";
+import { formatPkr, groupBoq, taxPercent } from "@/lib/boq-format";
 
 const MODEL_LABELS: Record<number, string> = {
   1: "Land & Build, Then Sell",
@@ -81,18 +77,31 @@ export default async function ClientProjectPage({
                   Cost Summary
                 </h2>
                 <div className="space-y-1 text-sm">
-                  <div className="flex justify-between text-stone-500">
-                    <span>Subtotal</span>
-                    <span>{currency.format(boq.subtotal)}</span>
-                  </div>
-                  <div className="flex justify-between text-stone-500">
-                    <span>Tax</span>
-                    <span>{currency.format(boq.tax)}</span>
+                  {groupBoq(boq).map((g) => (
+                    <div
+                      key={g.group}
+                      className="flex justify-between text-stone-600"
+                    >
+                      <span>{g.group}</span>
+                      <span>{formatPkr(g.subtotal)}</span>
+                    </div>
+                  ))}
+                  <div className="flex justify-between text-stone-500 pt-2 border-t border-stone-100 mt-2">
+                    <span>Sales tax ({taxPercent(boq)}%)</span>
+                    <span>{formatPkr(boq.tax)}</span>
                   </div>
                   <div className="flex justify-between text-lg font-bold text-brand-black pt-2 border-t border-stone-100 mt-2">
-                    <span>Total</span>
-                    <span>{currency.format(boq.total)}</span>
+                    <span>Total estimated cost</span>
+                    <span>{formatPkr(boq.total)}</span>
                   </div>
+                </div>
+                <p className="text-xs text-stone-400 mt-3">
+                  Based on your approved drawing and Category {project.category}{" "}
+                  materials in {project.city}. Final contract price is confirmed
+                  after site inspection.
+                </p>
+                <div className="mt-4">
+                  <PrintButton label="Print / Save this summary" />
                 </div>
               </>
             ) : (

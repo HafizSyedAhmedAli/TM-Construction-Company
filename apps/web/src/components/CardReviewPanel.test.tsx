@@ -140,7 +140,11 @@ describe("CadReviewPanel", () => {
     );
 
     // Anchored so this doesn't also match the "Subtotal:" line above it.
-    expect(await screen.findByText(/^total:/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/total estimated cost/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/tile flooring/i)).toBeInTheDocument();
+    expect(screen.getByText("Rs 61,776")).toBeInTheDocument();
     expect(fetch).toHaveBeenLastCalledWith("/api/projects/p1/finalize", {
       method: "POST",
     });

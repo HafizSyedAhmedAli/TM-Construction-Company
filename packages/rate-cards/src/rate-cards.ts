@@ -1,8 +1,11 @@
 // packages/rate-cards/src/rate-cards.ts
 import type { RateCard, Category } from "@tmcc/shared-types";
 
-// FR-15: city/category → rates. Placeholder figures — swap for TM CC's
-// actual published rate list before this touches a real client quote.
+// !! PLACEHOLDER FIGURES !! Indicative only — TM CC must replace these with
+// its own rate list before a final client quote. Labour items are
+// labour-only where a material line exists (masonry/plaster/steel fixing);
+// tile, marble, woodwork, foundation, rccRoof, electrical and paint are
+// composite (supply + labour) per-sqft rates.
 export const RATE_CARDS: RateCard[] = [
   ...ratesFor("Karachi", "A", 1.15),
   ...ratesFor("Karachi", "B", 1.0),
@@ -15,28 +18,45 @@ export const RATE_CARDS: RateCard[] = [
   ...ratesFor("Nawabshah", "C", 0.72),
 ];
 
-// Base per-unit rates at Category B / Karachi, scaled by a city+category
-// multiplier. Keeps 9 rate cards from being 9 copy-pasted item lists.
 function ratesFor(city: string, category: Category, mult: number): RateCard[] {
   return [
     {
       city,
       category,
-      taxPercent: 17, // Pakistan sales tax on services, per SRS §4.2
+      taxPercent: 17,
       items: [
-        { itemType: "masonry", unit: "sqft", unitRate: round(180 * mult) },
-        { itemType: "plaster", unit: "sqft", unitRate: round(65 * mult) },
+        // labour
+        { itemType: "masonry", unit: "sqft", unitRate: round(95 * mult) },
+        { itemType: "plaster", unit: "sqft", unitRate: round(40 * mult) },
         { itemType: "shuttering", unit: "sqft", unitRate: round(90 * mult) },
-        {
-          itemType: "steelFixing",
-          unit: "ton",
-          unitRate: round(285000 * mult),
-        },
+        { itemType: "steelFixing", unit: "ton", unitRate: round(28000 * mult) },
         { itemType: "sanitary", unit: "bath", unitRate: round(145000 * mult) },
+        // composite (supply + fix)
         { itemType: "tileFixing", unit: "sqft", unitRate: round(220 * mult) },
         { itemType: "marbleFixing", unit: "sqft", unitRate: round(450 * mult) },
         { itemType: "woodwork", unit: "sqft", unitRate: round(950 * mult) },
         { itemType: "falseCeiling", unit: "sqft", unitRate: round(160 * mult) },
+        { itemType: "foundation", unit: "sqft", unitRate: round(380 * mult) },
+        { itemType: "rccRoof", unit: "sqft", unitRate: round(750 * mult) },
+        { itemType: "electrical", unit: "sqft", unitRate: round(250 * mult) },
+        { itemType: "paint", unit: "sqft", unitRate: round(45 * mult) },
+        // materials (overridden by approved market-research rates)
+        { itemType: "brick", unit: "1000nos", unitRate: round(16500 * mult) },
+        {
+          itemType: "cement",
+          unit: "bag",
+          unitRate: round(1400 * (0.9 + mult / 10)),
+        },
+        {
+          itemType: "sand",
+          unit: "cft",
+          unitRate: round(70 * (0.9 + mult / 10)),
+        },
+        {
+          itemType: "steelMaterial",
+          unit: "ton",
+          unitRate: round(270000 * (0.95 + mult / 20)),
+        },
       ],
     },
   ];

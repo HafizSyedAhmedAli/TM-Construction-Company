@@ -55,6 +55,13 @@ export default function HomePage() {
         Head Office: 404, Oyster Towers, 4th Floor, Clifton Block 2, Karachi ·
         Regional Office: A-7, 1st Floor, Rehman City, Nawabshah
       </p>
+
+      <a
+        href="/office/leads"
+        className="text-xs text-stone-300 hover:text-brand mt-3"
+      >
+        Staff: open office dashboard →
+      </a>
     </main>
   );
 }
