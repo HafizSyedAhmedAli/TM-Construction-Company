@@ -34,25 +34,6 @@ export interface Geometry {
   openings: Opening[];
 }
 
-export type RateItemType =
-  | "masonry"
-  | "plaster"
-  | "shuttering"
-  | "steelFixing"
-  | "sanitary"
-  | "tileFixing"
-  | "marbleFixing"
-  | "woodwork"
-  | "falseCeiling"
-  | "foundation"
-  | "rccRoof"
-  | "electrical"
-  | "paint"
-  | "brick"
-  | "cement"
-  | "sand"
-  | "steelMaterial";
-
 export interface RateCardItem {
   itemType: RateItemType;
   unitRate: number;
@@ -79,4 +60,41 @@ export interface BOQResult {
   subtotal: number;
   tax: number;
   total: number;
+}
+
+export const RATE_ITEM_TYPES = [
+  "masonry",
+  "plaster",
+  "shuttering",
+  "steelFixing",
+  "sanitary",
+  "tileFixing",
+  "marbleFixing",
+  "woodwork",
+  "falseCeiling",
+  "foundation",
+  "rccRoof",
+  "electrical",
+  "paint",
+  "brick",
+  "cement",
+  "sand",
+  "steelMaterial",
+] as const;
+
+export type RateItemType = (typeof RATE_ITEM_TYPES)[number];
+
+// The four materials that must always appear on a BOQ, priced from a live
+// city-specific search (never a built-in figure).
+export const CORE_MATERIAL_TYPES = [
+  "brick",
+  "cement",
+  "sand",
+  "steelMaterial",
+] as const satisfies readonly RateItemType[];
+
+export interface RateCardItem {
+  itemType: RateItemType;
+  unitRate: number;
+  unit: "sqft" | "ton" | "bath" | "1000nos" | "bag" | "cft";
 }

@@ -3,7 +3,11 @@ import { NextRequest, NextResponse } from "next/server";
 import type { Geometry } from "@tmcc/shared-types";
 import { estimateFromGeometry } from "@tmcc/rate-cards";
 import { prisma } from "@tmcc/db";
-import { getEffectiveRateCard } from "@/lib/rate-sets";
+import { getLiveRateCard, RateUnavailableError } from "@/lib/rate-sets";
+
+// The first BOQ for a city runs a live AI price search (17 items, two
+// grounded searches plus a possible retry) before it can be priced.
+export const maxDuration = 120;
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -24,19 +28,32 @@ export async function POST(_req: NextRequest, { params }: RouteContext) {
     );
 
   const category = project.category as "A" | "B" | "C";
-  const rateCard = await getEffectiveRateCard(project.city, category);
+
+  // No placeholder fallback: if live rates cannot be found, nothing is
+  // saved and the project is not marked FINALIZED.
+  let rateCard;
+  try {
+    rateCard = await getLiveRateCard(project.city, category);
+  } catch (err) {
+    if (err instanceof RateUnavailableError) {
+      return NextResponse.json(
+        {
+          error: `${err.message}. Try again, or add rates manually on the Rates page.`,
+        },
+        { status: 502 },
+      );
+    }
+    throw err;
+  }
 
   const boq = estimateFromGeometry({
     geometry: cadFile.geometry as unknown as Geometry,
-    city: project.city,
-    category,
-    rateCard: rateCard ?? undefined,
+    rateCard,
   });
-
   if (!boq) {
     return NextResponse.json(
       {
-        error: `No rate card exists yet for ${project.city} / Category ${project.category}`,
+        error: `No rates available for ${project.city} / Category ${project.category}`,
       },
       { status: 422 },
     );

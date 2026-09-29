@@ -11,6 +11,7 @@ import {
   NativeSelect,
   NativeSelectOption,
 } from "@/components/ui/native-select";
+import { BOQ_META } from "@/lib/boq-format";
 
 export interface DraftRateSet {
   id: string;
@@ -21,22 +22,6 @@ export interface DraftRateSet {
   items: RateCardItem[];
   sources: ResearchSources | null;
 }
-
-const LABELS: Record<string, string> = {
-  brick: "Bricks (per 1,000)",
-  cement: "Cement (50 kg bag)",
-  sand: "Sand (per cft)",
-  steelMaterial: "Steel bars (per ton)",
-  masonry: "Masonry",
-  plaster: "Plaster",
-  shuttering: "Shuttering",
-  steelFixing: "Steel fixing",
-  sanitary: "Sanitary",
-  tileFixing: "Tile fixing",
-  marbleFixing: "Marble fixing",
-  woodwork: "Woodwork",
-  falseCeiling: "False ceiling",
-};
 
 // FR-15 / NFR-4: Gemini only ever proposes. Nothing reaches a BOQ until
 // office edits (if needed) and approves it here.
@@ -192,7 +177,7 @@ export function RateSetReviewPanel({
               return (
                 <div key={i.itemType} className="flex items-center gap-3 py-2">
                   <span className="w-48 text-sm">
-                    {LABELS[i.itemType] ?? i.itemType}
+                    {BOQ_META[i.itemType]?.label ?? i.itemType}
                   </span>
                   <Input
                     type="number"

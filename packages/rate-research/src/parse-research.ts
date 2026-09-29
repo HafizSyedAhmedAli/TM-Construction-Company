@@ -1,5 +1,5 @@
 import type { RateCardItem } from "@tmcc/shared-types";
-import { RATE_TARGETS } from "./rate-targets";
+import { RATE_TARGETS, RateTarget } from "./rate-targets";
 
 export interface RateSource {
   itemType: string;
@@ -49,6 +49,7 @@ const str = (v: unknown) =>
 export function parseRateResearch(
   text: string,
   now: Date = new Date(),
+  targets: RateTarget[] = RATE_TARGETS,
 ): ParsedRates {
   const rows = extractJsonArray(text);
   const items: RateCardItem[] = [];
@@ -57,7 +58,7 @@ export function parseRateResearch(
 
   for (const raw of rows) {
     const r = (raw ?? {}) as Record<string, unknown>;
-    const target = RATE_TARGETS.find((t) => t.itemType === r.itemType);
+    const target = targets.find((t) => t.itemType === r.itemType);
     if (!target) {
       warnings.push(`Ignored unknown item "${String(r.itemType)}"`);
       continue;
@@ -108,7 +109,7 @@ export function parseRateResearch(
     });
   }
 
-  for (const t of RATE_TARGETS) {
+  for (const t of targets) {
     if (!items.some((i) => i.itemType === t.itemType))
       warnings.push(`No price found for ${t.label}`);
   }

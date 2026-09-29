@@ -13,6 +13,7 @@ vi.mock("@tmcc/db", () => ({
 }));
 
 import { prisma } from "@tmcc/db";
+import { getLiveRateCard, RateUnavailableError } from "@/lib/rate-sets";
 
 function ctx(id: string) {
   return { params: Promise.resolve({ id }) };
@@ -68,7 +69,7 @@ describe("POST /api/projects/:id/finalize", () => {
     expect(prisma.cadFile.update).not.toHaveBeenCalled();
   });
 
-  it("422s with a clear message when no rate card exists for the project's city/category (FR-15/NFR-4)", async () => {
+  it("502s with a clear message and saves nothing when live rates can't be found (no placeholder fallback)", async () => {
     (prisma.project.findUnique as any).mockResolvedValue({
       id: "p1",
       city: "Multan",
@@ -79,11 +80,14 @@ describe("POST /api/projects/:id/finalize", () => {
       projectId: "p1",
       geometry: GEOMETRY,
     });
+    (getLiveRateCard as any).mockRejectedValue(
+      new RateUnavailableError("Multan", "B", "no prices found"),
+    );
 
     const res = await POST(req() as any, ctx("p1"));
     const json = await res.json();
 
-    expect(res.status).toBe(422);
+    expect(res.status).toBe(502);
     expect(json.error).toMatch(/multan/i);
     expect(prisma.cadFile.update).not.toHaveBeenCalled();
     expect(prisma.project.update).not.toHaveBeenCalled();
@@ -100,6 +104,7 @@ describe("POST /api/projects/:id/finalize", () => {
       projectId: "p1",
       geometry: GEOMETRY,
     });
+    (getLiveRateCard as any).mockResolvedValue(liveCard("Karachi"));
     (prisma.cadFile.update as any).mockImplementation(({ data }: any) =>
       Promise.resolve({
         id: "cad_1",
@@ -114,10 +119,12 @@ describe("POST /api/projects/:id/finalize", () => {
 
     expect(res.status).toBe(200);
     expect(json.boq.total).toBeGreaterThan(0);
+    for (const t of ["brick", "cement", "sand", "steelMaterial"]) {
+      expect(json.boq.lineItems.some((l: any) => l.itemType === t)).toBe(true);
+    }
     expect(
       json.boq.lineItems.find((l: any) => l.itemType === "sanitary")?.quantity,
     ).toBe(1);
-
     expect(prisma.cadFile.update).toHaveBeenCalledWith({
       where: { projectId: "p1" },
       data: { boq: json.boq },

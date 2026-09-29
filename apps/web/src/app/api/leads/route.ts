@@ -2,7 +2,28 @@ import { NextRequest, NextResponse } from "next/server";
 import { validateLeadIntake } from "@tmcc/lead-intake";
 import { estimateLead } from "@tmcc/rate-cards";
 import { prisma } from "@tmcc/db";
-import { getEffectiveRateCard } from "@/lib/rate-sets";
+import { getLiveRateCard } from "@/lib/rate-sets";
+
+export const maxDuration = 60;
+
+// Lead capture must never wait forever on a price search.
+const ESTIMATE_TIMEOUT_MS = 40_000;
+
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error("timeout")), ms);
+    p.then(
+      (v) => {
+        clearTimeout(t);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(t);
+        reject(e);
+      },
+    );
+  });
+}
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -15,15 +36,15 @@ export async function POST(req: NextRequest) {
     data: { ...body, source: "FORM" },
   });
 
-  // Use approved rates when office has any; never let a rate lookup failure
-  // block lead capture.
-  const rateCard = await getEffectiveRateCard(body.city, body.category).catch(
-    () => null,
-  );
+  // The rough estimate uses live city rates (searched on first use). If they
+  // cannot be found in time the lead is still saved and `estimate` is null —
+  // there is no placeholder estimate.
+  const rateCard = await withTimeout(
+    getLiveRateCard(body.city, body.category),
+    ESTIMATE_TIMEOUT_MS,
+  ).catch(() => null);
 
   const estimate = estimateLead({
-    city: body.city,
-    category: body.category,
     model: body.model,
     rateCard: rateCard ?? undefined,
   });

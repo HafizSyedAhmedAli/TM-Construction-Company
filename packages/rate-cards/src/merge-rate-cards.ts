@@ -1,7 +1,8 @@
 import type { RateCard } from "@tmcc/shared-types";
 
-// Approved rates override the base card item-by-item. A city with no
-// placeholder card (e.g. Multan) works once it has an approved set.
+// `approved` overrides `base` item-by-item. Used to layer office-approved
+// rates over freshly researched ones, so a partial approved set is completed
+// by live search instead of by any built-in figure.
 export function mergeRateCards(
   base: RateCard | undefined,
   approved: RateCard | undefined,

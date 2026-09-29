@@ -1,6 +1,7 @@
 import ezdxf
 
 doc = ezdxf.new('R2010')
+doc.header['$INSUNITS'] = 2
 msp = doc.modelspace()
 
 doc.layers.add(name='WALLS', color=7)

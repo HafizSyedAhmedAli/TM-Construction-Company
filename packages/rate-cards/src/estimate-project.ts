@@ -1,23 +1,17 @@
 import { calculateBoq } from "@tmcc/boq-engine";
-import type {
-  BOQResult,
-  Category,
-  Geometry,
-  RateCard,
-} from "@tmcc/shared-types";
-import { getRateCard } from "./rate-cards";
+import type { BOQResult, Geometry, RateCard } from "@tmcc/shared-types";
 
 export interface EstimateProjectInput {
   geometry: Geometry;
-  city: string;
-  category: Category;
-  rateCard?: RateCard; // approved/merged card from the DB; falls back to the placeholder
+  /** Live city/category rate card. There is no built-in fallback. */
+  rateCard?: RateCard;
 }
 
+// Returns null when no rate card is supplied — callers must fetch live rates
+// first (see getLiveRateCard in the web app).
 export function estimateFromGeometry(
   input: EstimateProjectInput,
 ): BOQResult | null {
-  const rateCard = input.rateCard ?? getRateCard(input.city, input.category);
-  if (!rateCard) return null;
-  return calculateBoq(input.geometry, rateCard);
+  if (!input.rateCard) return null;
+  return calculateBoq(input.geometry, input.rateCard);
 }

@@ -3,10 +3,10 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseDxfToGeometry } from "./parse-dxf";
 
-describe("whole-house-simple-plan.dxf (LINE walls, mm units)", () => {
+describe("whole_house_simple_plan.dxf (LINE walls, mm units)", () => {
   const g = parseDxfToGeometry(
     readFileSync(
-      join(__dirname, "../fixtures/whole-house-simple-plan.dxf"),
+      join(__dirname, "../fixtures/whole_house_simple_plan.dxf"),
       "utf8",
     ),
   );

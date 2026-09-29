@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { Category } from "@tmcc/shared-types";
-import { researchRates } from "@tmcc/rate-research";
-import { getRateCard } from "@tmcc/rate-cards";
+import { researchCompleteRates } from "@tmcc/rate-research";
+import { DEFAULT_TAX_PERCENT } from "@tmcc/rate-cards";
 import { prisma } from "@tmcc/db";
 
-export const maxDuration = 60; // search-grounded calls can be slow
+export const maxDuration = 120; // 17 items = two grounded searches (+ retry)
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
   // saved and no existing BOQ or approved rate is touched.
   let research;
   try {
-    research = await researchRates({ city, category });
+    research = await researchCompleteRates({ city, category });
   } catch (err) {
     return NextResponse.json(
       {
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
       category,
       status: "DRAFT",
       origin: "gemini",
-      taxPercent: getRateCard(city, category)?.taxPercent ?? 17,
+      taxPercent: DEFAULT_TAX_PERCENT,
       items: research.items as unknown as object,
       sources: research.sources as unknown as object,
     },
