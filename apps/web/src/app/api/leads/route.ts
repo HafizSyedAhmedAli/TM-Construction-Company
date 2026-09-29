@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { validateLeadIntake } from "@tmcc/lead-intake";
+import {
+  validateLeadIntake,
+  validatePlanFile,
+  type LeadIntakeInput,
+} from "@tmcc/lead-intake";
 import { estimateLead } from "@tmcc/rate-cards";
 import { prisma } from "@tmcc/db";
 import { getLiveRateCard } from "@/lib/rate-sets";
+import { pickLeadData, readLeadRequest } from "@/lib/lead-request";
+import { savePlanFile } from "@/lib/save-plan-file";
 
 export const maxDuration = 60;
 
@@ -26,26 +32,50 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
 }
 
 export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const result = validateLeadIntake(body);
-  if (!result.valid) {
-    return NextResponse.json({ errors: result.errors }, { status: 400 });
+  const { body, planFile } = await readLeadRequest(req);
+  const input = (body ?? {}) as Partial<LeadIntakeInput>;
+
+  const result = validateLeadIntake(input);
+  const planFileError = planFile ? validatePlanFile(planFile) : null;
+  if (!result.valid || planFileError) {
+    return NextResponse.json(
+      {
+        errors: {
+          ...result.errors,
+          ...(planFileError ? { planFile: planFileError } : {}),
+        },
+      },
+      { status: 400 },
+    );
   }
 
-  const lead = await prisma.lead.create({
-    data: { ...body, source: "FORM" },
+  let lead = await prisma.lead.create({
+    data: pickLeadData(input as LeadIntakeInput),
   });
+
+  // The lead is already saved; a failed file write must not lose it.
+  if (planFile) {
+    try {
+      const planFileUrl = await savePlanFile(lead.id, planFile);
+      lead = await prisma.lead.update({
+        where: { id: lead.id },
+        data: { planFileUrl, planFileName: planFile.name },
+      });
+    } catch (err) {
+      console.error("Could not save lead plan file", err);
+    }
+  }
 
   // The rough estimate uses live city rates (searched on first use). If they
   // cannot be found in time the lead is still saved and `estimate` is null —
   // there is no placeholder estimate.
   const rateCard = await withTimeout(
-    getLiveRateCard(body.city, body.category),
+    getLiveRateCard(input.city!, input.category!),
     ESTIMATE_TIMEOUT_MS,
   ).catch(() => null);
 
   const estimate = estimateLead({
-    model: body.model,
+    model: input.model!,
     rateCard: rateCard ?? undefined,
   });
 

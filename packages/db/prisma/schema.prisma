@@ -9,15 +9,27 @@ datasource db {
 }
 
 model Lead {
-  id        String    @id @default(cuid())
-  name      String
-  contact   String
-  city      String
-  model     Int
-  category  String
-  source    String    @default("FORM")
-  createdAt DateTime  @default(now())
-  projects  Project[]
+  id              String    @id @default(cuid())
+  name            String
+  contact         String
+  city            String
+  model           Int
+  category        String
+  source          String    @default("FORM")
+  // Requirements captured on the homepage intake form
+  houseType       String    @default("House")
+  floors          Int?
+  bedrooms        Int?
+  plotSizeSqYd    Float?
+  coveredAreaSqFt Float?
+  budgetRange     String?
+  timeline        String?
+  additionalNotes String?
+  planFileUrl     String?
+  planFileName    String?
+  consent         Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  projects        Project[]
 }
 
 // FR-5/6/7: office staff work against a Project once a Lead's meeting has

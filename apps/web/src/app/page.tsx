@@ -5,22 +5,25 @@ import Image from "next/image";
 import { MapPin, Phone, ShieldCheck, Mail, Globe } from "lucide-react";
 import { IntakeForm, type IntakeSubmitResult } from "@/components/IntakeForm";
 import type { LeadIntakeInput } from "@tmcc/lead-intake";
+import { buildLeadRequest } from "@/lib/build-lead-request";
 
 const NAV = ["Home", "About", "Our Services", "Gallery", "Contact"];
 
 export default function HomePage() {
   async function handleSubmit(
     data: LeadIntakeInput,
+    planFile: File | null,
   ): Promise<IntakeSubmitResult> {
-    const res = await fetch("/api/leads", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
+    const res = await fetch("/api/leads", buildLeadRequest(data, planFile));
+    const body = await res.json().catch(() => null);
 
-    if (!res.ok) throw new Error("Failed to submit lead");
-
-    const body = await res.json();
+    if (!res.ok) {
+      const messages = body?.errors
+        ? Object.values(body.errors as Record<string, string>).join(" ")
+        : "";
+      throw new Error(messages || "Failed to submit lead");
+    }
+    
     return { estimate: body.estimate };
   }
 
