@@ -2,12 +2,17 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import type { Category, EngagementModel } from "@tmcc/shared-types";
-import { CITIES } from "@tmcc/lead-intake";
+import {
+  citiesByProvince,
+  CITY_NAMES,
+  type Category,
+  type EngagementModel,
+} from "@tmcc/shared-types";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
   NativeSelect,
+  NativeSelectOptGroup,
   NativeSelectOption,
 } from "@/components/ui/native-select";
 
@@ -17,6 +22,8 @@ interface ConvertLeadFormProps {
   defaultModel: number;
   defaultCategory: string;
 }
+
+const CITY_GROUPS = citiesByProvince();
 
 // SRS §3 steps 3-5: by the time office is looking at this form, they've
 // already met the client and finalized the design brief — city/model/
@@ -80,7 +87,7 @@ export function ConvertLeadForm({
             value={city}
             onChange={(e) => setCity(e.target.value)}
           >
-            {CITIES.map((c) => (
+            {CITY_NAMES.map((c) => (
               <NativeSelectOption key={c} value={c}>
                 {c}
               </NativeSelectOption>

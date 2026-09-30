@@ -8,8 +8,8 @@ import { StepConfirm } from "./intake/StepConfirm";
 import { StepProjectDetails } from "./intake/StepProjectDetails";
 import { StepRequirements } from "./intake/StepRequirements";
 import { ThankYou } from "./intake/ThankYou";
-import { STEPS, useIntakeForm } from "./intake/useIntakeForm";
 import type { IntakeSubmitHandler } from "./intake/types";
+import { STEPS, useIntakeForm } from "./intake/useIntakeForm";
 
 export type { IntakeSubmitResult } from "./intake/types";
 

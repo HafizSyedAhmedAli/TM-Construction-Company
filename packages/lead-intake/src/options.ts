@@ -1,11 +1,12 @@
 // packages/lead-intake/src/options.ts
 
-// SRS §2.1: HQ in Karachi, regional office in Nawabshah; Hyderabad used as
-// the worked example on the intake form. Extend as TM CC opens new service
-// areas — this list is intentionally separate from RateCard.city (NFR-4),
-// since a city can be servable for intake before a rate card exists for it.
-export const CITIES = ["Karachi", "Hyderabad", "Nawabshah"] as const;
-export type City = (typeof CITIES)[number];
+import { CITY_NAMES } from "@tmcc/shared-types";
+
+// Every city in Pakistan, A to Z (see @tmcc/shared-types pakistan-cities.ts).
+// A city can be servable for intake before a rate card exists for it (NFR-4):
+// rates are searched live and nearby markets are used when the city has none.
+export const CITIES: readonly string[] = CITY_NAMES;
+export type City = string;
 
 export const HOUSE_TYPES = ["House", "Villa", "Farmhouse"] as const;
 export type HouseType = (typeof HOUSE_TYPES)[number];

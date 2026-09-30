@@ -7,7 +7,7 @@ import {
   withFixedLabour,
 } from "@tmcc/rate-cards";
 import { researchCompleteRates } from "@tmcc/rate-research";
-import type { Category, RateCard, RateCardItem } from "@tmcc/shared-types";
+import { canonicalCityName, type Category, type RateCard, type RateCardItem } from "@tmcc/shared-types";
 
 export class RateSetError extends Error {
   constructor(public code: "NOT_FOUND" | "NOT_DRAFT") {
@@ -54,7 +54,7 @@ export function getLiveRateCard(
   city: string,
   category: Category,
 ): Promise<RateCard> {
-  const cleanCity = city.trim();
+  const cleanCity = canonicalCityName(city) ?? city.trim();
   const key = `${cleanCity.toLowerCase()}|${category}`;
   const running = inflight.get(key);
   if (running) return running;

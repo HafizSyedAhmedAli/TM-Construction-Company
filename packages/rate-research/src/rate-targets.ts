@@ -6,6 +6,7 @@ export interface RateTarget {
   label: string;
   unit: RateCardItem["unit"];
   ask: string;
+  derive?: string;
   // Wide PKR sanity bounds. They only catch obvious hallucinations
   // (a 50 rupee cement bag), not wrong-but-plausible prices. Review by
   // office is what catches those. TM CC should adjust the bounds.
@@ -129,6 +130,8 @@ export const RATE_TARGETS: RateTarget[] = [
     label: "Foundation, excavation & plinth",
     unit: "sqft",
     ask: "all-in construction rate per square foot of covered area for excavation, foundation and plinth (grey structure portion), material and labour",
+    derive:
+      "If no per-sqft foundation rate is published, derive it from published unit rates (excavation per 1000 cft, PCC/RCC per cft, brick or block masonry in foundation) or from a published grey-structure cost per sqft, and show the arithmetic",
     min: 150,
     max: 1_200,
   },
@@ -137,6 +140,8 @@ export const RATE_TARGETS: RateTarget[] = [
     label: "RCC roof slab & beams",
     unit: "sqft",
     ask: "rate per square foot of covered area for RCC roof slab and beams (concrete work), material and labour, excluding steel bars and shuttering",
+    derive:
+      "If no per-sqft RCC roof rate is published, derive it from a published RCC (concrete) rate per cft with material and labour, using a 5-inch slab plus beams allowance, and show the arithmetic",
     min: 300,
     max: 1_800,
   },

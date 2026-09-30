@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import type { Category } from "@tmcc/shared-types";
+import { canonicalCityName, type Category } from "@tmcc/shared-types";
 import { researchCompleteRates } from "@tmcc/rate-research";
 import { DEFAULT_TAX_PERCENT } from "@tmcc/rate-cards";
 import { prisma } from "@tmcc/db";
@@ -8,7 +8,8 @@ export const maxDuration = 120; // 17 items = two grounded searches (+ retry)
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
-  const city = typeof body?.city === "string" ? body.city.trim() : "";
+  const typed = typeof body?.city === "string" ? body.city.trim() : "";
+  const city = canonicalCityName(typed) ?? typed;
   const category = body?.category as Category;
   if (!city || !["A", "B", "C"].includes(category)) {
     return NextResponse.json(

@@ -5,6 +5,7 @@ import { SelectField, TextField } from "./fields";
 import { OptionCards } from "./OptionCards";
 import { MODEL_OPTIONS } from "./option-config";
 import type { StepProps } from "./types";
+import { CITY_NAMES } from "@tmcc/shared-types";
 
 export function StepProjectDetails({ values, errors, setField }: StepProps) {
   return (
@@ -40,7 +41,7 @@ export function StepProjectDetails({ values, errors, setField }: StepProps) {
           required
           icon={<MapPin className="size-4" />}
           placeholder="Select a city"
-          options={CITIES.map((c) => ({ value: c, label: c }))}
+          options={CITY_NAMES.map((c) => ({ value: c, label: c }))}
           value={values.city}
           error={errors.city}
           onChange={(v) => setField("city", v)}

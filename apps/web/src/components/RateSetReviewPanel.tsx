@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { RateCardItem } from "@tmcc/shared-types";
+import { CITY_NAMES, type RateCardItem } from "@tmcc/shared-types";
 import type { ResearchSources } from "@tmcc/rate-research";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -112,7 +112,14 @@ export function RateSetReviewPanel({
               value={city}
               onChange={(e) => setCity(e.target.value)}
               placeholder="Nawabshah"
+              list="rs-city-list"
+              autoComplete="off"
             />
+            <datalist id="rs-city-list">
+              {CITY_NAMES.map((c) => (
+                <option key={c} value={c} />
+              ))}
+            </datalist>
           </div>
           <div>
             <Label htmlFor="rs-cat">Category</Label>
