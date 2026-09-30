@@ -8,6 +8,13 @@ import type {
   RoomType,
   Wall,
 } from "@tmcc/shared-types";
+import {
+  BrickWall,
+  Calculator,
+  DoorOpen,
+  GripVertical,
+  Trash2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,9 +36,19 @@ interface CadReviewPanelProps {
   onGeometryUploaded?: () => void;
   /** Called whenever the BOQ is calculated (BOQResult) or invalidated (null). */
   onBoqChange?: (boq: BOQResult | null) => void;
+  /** Set false when the parent renders the BOQ itself (project page layout). */
+  showBoq?: boolean;
 }
 
 type Status = "idle" | "uploading" | "reviewing" | "saving" | "calculating";
+type DragState = { kind: "room" | "wall"; from: number } | null;
+
+function reorder<T>(items: T[], from: number, to: number): T[] {
+  const next = [...items];
+  const [moved] = next.splice(from, 1);
+  next.splice(to, 0, moved);
+  return next;
+}
 
 // FR-8/9/10/11/12/13: upload a DXF, let office staff correct what the parser
 // extracted, then price the corrected geometry. This talks to routes that
@@ -43,9 +60,12 @@ export function CadReviewPanel({
   initialBoq = null,
   onGeometryUploaded,
   onBoqChange,
+  showBoq = true,
 }: CadReviewPanelProps) {
   const [geometry, setGeometry] = useState<Geometry | null>(initialGeometry);
   const [boq, setBoq] = useState<BOQResult | null>(initialBoq);
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [drag, setDrag] = useState<DragState>(null);
   const [status, setStatus] = useState<Status>(
     initialGeometry ? "reviewing" : "idle",
   );
@@ -71,6 +91,7 @@ export function CadReviewPanel({
       const body = await res.json();
       if (!res.ok) throw new Error(body.error ?? "Upload failed.");
       setGeometry(body.geometry as Geometry);
+      setFileName(file.name);
       setStatus("reviewing");
       onGeometryUploaded?.();
     } catch (err) {
@@ -105,6 +126,33 @@ export function CadReviewPanel({
           }
         : g,
     );
+  }
+
+  function removeRoom(index: number) {
+    setGeometry((g) =>
+      g ? { ...g, rooms: g.rooms.filter((_, i) => i !== index) } : g,
+    );
+  }
+
+  function removeWall(index: number) {
+    setGeometry((g) =>
+      g ? { ...g, walls: g.walls.filter((_, i) => i !== index) } : g,
+    );
+  }
+
+  function dropOn(kind: "room" | "wall", to: number) {
+    if (!drag || drag.kind !== kind || drag.from === to) {
+      setDrag(null);
+      return;
+    }
+    const from = drag.from;
+    setGeometry((g) => {
+      if (!g) return g;
+      return kind === "room"
+        ? { ...g, rooms: reorder(g.rooms, from, to) }
+        : { ...g, walls: reorder(g.walls, from, to) };
+    });
+    setDrag(null);
   }
 
   async function handleSaveCorrections() {
@@ -153,44 +201,61 @@ export function CadReviewPanel({
     }
   }
 
+  const sectionTitle =
+    "mb-3 flex items-center gap-2.5 text-sm font-semibold text-brand-black";
+  const sectionIcon =
+    "grid size-7 place-items-center rounded-md border border-stone-200 bg-white text-brand-black";
+  const tableWrap =
+    "overflow-x-auto rounded-xl border border-stone-200 bg-white";
+  const th = "px-3 py-2.5 text-left font-semibold";
+  const deleteBtn =
+    "grid size-8 cursor-pointer place-items-center rounded-lg text-brand hover:bg-red-50";
+  const grip =
+    "grid cursor-grab place-items-center text-stone-300 hover:text-stone-500 active:cursor-grabbing";
+  const fieldCls =
+    "h-11 rounded-xl border-stone-200! bg-white! px-4 text-[15px] text-brand-black shadow-sm hover:border-stone-300! focus-visible:border-brand! focus-visible:ring-brand/20";
+
+  const selectCls =
+    "w-full cursor-pointer [&_select]:h-11 [&_select]:rounded-xl [&_select]:border-stone-200 [&_select]:bg-white [&_select]:px-4 [&_select]:text-[15px] [&_select]:text-brand-black [&_select]:shadow-sm [&_select:hover]:border-stone-300 [&_select:focus-visible]:border-brand [&_select:focus-visible]:ring-brand/20 [&_svg]:right-4";
+
   return (
     <div className="space-y-6">
-      <div>
-        <Label htmlFor="cad-file">Upload AutoCAD file (.dxf)</Label>
-        <input
-          id="cad-file"
-          type="file"
-          accept=".dxf"
-          onChange={handleFileChange}
-          disabled={status === "uploading"}
-          className="mt-1.5 block text-sm text-stone-600 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-brand file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white hover:file:bg-brand-dark disabled:opacity-50"
-        />
-        {status === "uploading" && (
-          <p className="text-xs text-stone-400 mt-1.5">Parsing drawing…</p>
-        )}
-        <p className="text-xs text-stone-400 mt-1.5">
-          Export the plan from AutoCAD as .dxf (.dwg conversion is not available
-          yet). Units are detected automatically (mm, cm, m, ft).
-        </p>
-      </div>
-
-      {error && (
-        <p className="text-sm text-red-600" role="alert">
-          {error}
-        </p>
-      )}
-
-      {geometry && (
-        <>
-          {geometry.rooms.length === 0 && (
-            <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-              No rooms were detected — this drawing may not follow the expected
-              layer convention (see SRS §9.1/9.3). Nothing was lost;
-              double-check the file, or correct the quantities manually below.
-            </p>
+      {/* Upload + summary tiles */}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,200px)_1fr] lg:items-start">
+        <div>
+          <Label htmlFor="cad-file" className="text-[13px] font-semibold">
+            Upload AutoCAD file (.dxf)
+          </Label>
+          <div className="mt-2 flex flex-wrap items-center gap-3">
+            <input
+              id="cad-file"
+              type="file"
+              accept=".dxf"
+              onChange={handleFileChange}
+              disabled={status === "uploading"}
+              className="peer sr-only"
+            />
+            <label
+              htmlFor="cad-file"
+              className="inline-flex cursor-pointer items-center rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark peer-disabled:opacity-50 peer-focus-visible:ring-3 peer-focus-visible:ring-brand/40"
+            >
+              Choose File
+            </label>
+            <span className="max-w-[9rem] truncate text-xs text-stone-500">
+              {fileName ?? "No file chosen"}
+            </span>
+          </div>
+          {status === "uploading" && (
+            <p className="mt-1.5 text-xs text-stone-400">Parsing drawing…</p>
           )}
+          <p className="mt-2 text-[11px] leading-relaxed text-stone-400">
+            Export the plan from AutoCAD as .dxf (.dwg conversion is not
+            available yet). Units are detected automatically (mm, cm, m, ft).
+          </p>
+        </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">
+        {geometry && (
+          <div className="grid grid-cols-2 gap-2 text-center sm:grid-cols-5">
             {[
               ["Rooms", geometry.rooms.length],
               [
@@ -212,46 +277,95 @@ export function CadReviewPanel({
             ].map(([label, value]) => (
               <div
                 key={label as string}
-                className="rounded-lg border border-stone-200 bg-white px-2 py-2"
+                className="rounded-xl border border-stone-200 bg-white px-2 py-3"
               >
-                <p className="text-[11px] uppercase tracking-wide text-stone-400">
+                <p className="text-[10px] uppercase tracking-wide text-stone-400">
                   {label}
                 </p>
-                <p className="text-sm font-semibold text-brand-black">
+                <p className="mt-0.5 text-sm font-semibold text-brand-black">
                   {value}
                 </p>
               </div>
             ))}
           </div>
+        )}
+      </div>
 
+      {error && (
+        <p className="text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      )}
+
+      {geometry && (
+        <>
+          {geometry.rooms.length === 0 && (
+            <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
+              No rooms were detected — this drawing may not follow the expected
+              layer convention (see SRS §9.1/9.3). Nothing was lost;
+              double-check the file, or correct the quantities manually below.
+            </p>
+          )}
+
+          {/* Rooms */}
+          {/* Rooms */}
           <section>
-            <h3 className="text-sm font-semibold text-brand-black mb-2">
+            <h3 className={sectionTitle}>
+              <span className={sectionIcon}>
+                <DoorOpen className="size-4" />
+              </span>
               Rooms ({geometry.rooms.length})
             </h3>
-            <div className="overflow-x-auto border border-stone-200 rounded-lg">
+            <div className={tableWrap}>
               <table className="w-full text-sm">
-                <thead className="bg-stone-50 text-stone-500 text-xs uppercase">
+                <thead className="bg-stone-50 text-[11px] uppercase tracking-wide text-stone-500">
                   <tr>
-                    <th className="text-left px-3 py-2">Name</th>
-                    <th className="text-left px-3 py-2">Type</th>
-                    <th className="text-left px-3 py-2">Area (sqft)</th>
+                    <th className="w-8" />
+                    <th className={th}>Name</th>
+                    <th className={th}>Type</th>
+                    <th className={th}>Area (sq ft)</th>
+                    <th className="w-12" />
                   </tr>
                 </thead>
                 <tbody>
                   {geometry.rooms.map((room, i) => (
-                    <tr key={room.id} className="border-t border-stone-100">
-                      <td className="px-3 py-1.5">
+                    <tr
+                      key={room.id}
+                      onDragOver={(e) => {
+                        if (drag?.kind === "room") e.preventDefault();
+                      }}
+                      onDrop={() => dropOn("room", i)}
+                      className={`border-t border-stone-100 ${
+                        drag?.kind === "room" && drag.from === i
+                          ? "opacity-40"
+                          : ""
+                      }`}
+                    >
+                      <td className="pl-2 pr-0">
+                        <span
+                          draggable
+                          onDragStart={() => setDrag({ kind: "room", from: i })}
+                          onDragEnd={() => setDrag(null)}
+                          title="Drag to reorder"
+                          className={grip}
+                        >
+                          <GripVertical className="size-4" />
+                        </span>
+                      </td>
+                      <td className="px-3 py-2">
                         <Input
                           aria-label={`Room ${i + 1} name`}
+                          className={fieldCls}
                           value={room.name}
                           onChange={(e) =>
                             updateRoom(i, { name: e.target.value })
                           }
                         />
                       </td>
-                      <td className="px-3 py-1.5">
+                      <td className="px-3 py-2">
                         <NativeSelect
                           aria-label={`Room ${i + 1} type`}
+                          className={selectCls}
                           value={room.type}
                           onChange={(e) =>
                             updateRoom(i, { type: e.target.value as RoomType })
@@ -268,16 +382,27 @@ export function CadReviewPanel({
                           </NativeSelectOption>
                         </NativeSelect>
                       </td>
-                      <td className="px-3 py-1.5">
+                      <td className="px-3 py-2">
                         <Input
                           aria-label={`Room ${i + 1} area`}
                           type="number"
+                          className={fieldCls}
                           value={room.area}
                           onChange={(e) =>
                             updateRoom(i, { area: Number(e.target.value) })
                           }
                         />
                       </td>
+                      <td className="px-2 py-1.5 text-right">
+                        <button
+                          type="button"
+                          aria-label={`Remove room ${i + 1}`}
+                          onClick={() => removeRoom(i)}
+                          className={deleteBtn}
+                        >
+                          <Trash2 className="size-4" />
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -285,34 +410,86 @@ export function CadReviewPanel({
             </div>
           </section>
 
+          {/* Walls */}
           <section>
-            <h3 className="text-sm font-semibold text-brand-black mb-2">
+            <h3 className={sectionTitle}>
+              <span className={sectionIcon}>
+                <BrickWall className="size-4" />
+              </span>
               Walls ({geometry.walls.length})
             </h3>
-            <div className="overflow-x-auto border border-stone-200 rounded-lg">
+            <div className={`${tableWrap} max-h-96 overflow-y-auto`}>
               <table className="w-full text-sm">
-                <thead className="bg-stone-50 text-stone-500 text-xs uppercase">
+                <thead className="sticky top-0 z-10 bg-stone-50 text-[11px] uppercase tracking-wide text-stone-500">
                   <tr>
-                    <th className="text-left px-3 py-2">Wall</th>
-                    <th className="text-left px-3 py-2">Length (ft)</th>
-                    <th className="text-left px-3 py-2">Height (ft)</th>
+                    <th className="w-8" />
+                    <th className={th}>Wall</th>
+                    <th className={th}>Length (ft)</th>
+                    <th className={th}>Height (ft)</th>
+                    <th className="w-12" />
                   </tr>
                 </thead>
                 <tbody>
                   {geometry.walls.map((wall, i) => (
-                    <tr key={wall.id} className="border-t border-stone-100">
-                      <td className="px-3 py-1.5">
+                    <tr
+                      key={wall.id}
+                      onDragOver={(e) => {
+                        if (drag?.kind === "wall") e.preventDefault();
+                      }}
+                      onDrop={() => dropOn("wall", i)}
+                      className={`border-t border-stone-100 ${
+                        drag?.kind === "wall" && drag.from === i
+                          ? "opacity-40"
+                          : ""
+                      }`}
+                    >
+                      <td className="pl-2 pr-0">
+                        <span
+                          draggable
+                          onDragStart={() => setDrag({ kind: "wall", from: i })}
+                          onDragEnd={() => setDrag(null)}
+                          title="Drag to reorder"
+                          className={grip}
+                        >
+                          <GripVertical className="size-4" />
+                        </span>
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="flex h-11 items-center rounded-xl border border-stone-200 bg-white px-4 text-[15px] text-brand-black shadow-sm">
+                          Wall {i + 1}
+                        </div>
+                      </td>
+                      <td className="px-3 py-2">
+                        <Input
+                          aria-label={`Wall ${i + 1} length`}
+                          type="number"
+                          className={fieldCls}
+                          value={wall.length}
+                          onChange={(e) =>
+                            updateWall(i, { length: Number(e.target.value) })
+                          }
+                        />
+                      </td>
+                      <td className="px-3 py-2">
                         <Input
                           aria-label={`Wall ${i + 1} height`}
                           type="number"
+                          className={fieldCls}
                           value={wall.height}
                           onChange={(e) =>
                             updateWall(i, { height: Number(e.target.value) })
                           }
                         />
                       </td>
-                      <td className="px-3 py-1.5 text-stone-500">
-                        {wall.height}
+                      <td className="px-2 py-1.5 text-right">
+                        <button
+                          type="button"
+                          aria-label={`Remove wall ${i + 1}`}
+                          onClick={() => removeWall(i)}
+                          className={deleteBtn}
+                        >
+                          <Trash2 className="size-4" />
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -321,11 +498,11 @@ export function CadReviewPanel({
             </div>
           </section>
 
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
             <Button
               onClick={handleSaveCorrections}
               disabled={status === "saving"}
-              className="bg-brand hover:bg-brand-dark text-white cursor-pointer disabled:cursor-not-allowed"
+              className="h-10 cursor-pointer bg-brand px-4 text-white hover:bg-brand-dark disabled:cursor-not-allowed"
             >
               {status === "saving" ? "Saving…" : "Save corrections"}
             </Button>
@@ -333,17 +510,18 @@ export function CadReviewPanel({
               onClick={handleCalculateBoq}
               disabled={status === "calculating"}
               variant="outline"
-              className="cursor-pointer disabled:cursor-not-allowed"
+              className="h-10 cursor-pointer gap-2 px-4 disabled:cursor-not-allowed"
             >
+              <Calculator className="size-4" />
               {status === "calculating" ? "Calculating…" : "Calculate BOQ"}
             </Button>
           </div>
         </>
       )}
 
-      {boq && (
+      {showBoq && boq && (
         <section className="border-t border-stone-200 pt-5">
-          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <h3 className="text-sm font-semibold text-brand-black">
               Bill of Quantities
             </h3>

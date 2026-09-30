@@ -1,3 +1,5 @@
+import { Check } from "lucide-react";
+
 export function ProjectStepper({
   hasCad,
   hasBoq,
@@ -16,21 +18,25 @@ export function ProjectStepper({
   ];
   const current = steps.findIndex((s) => !s.done);
   return (
-    <ol className="print:hidden flex flex-wrap gap-2 mb-8">
+    <ol className="print:hidden flex flex-wrap gap-2">
       {steps.map((s, i) => {
         const state = s.done ? "done" : i === current ? "current" : "todo";
         return (
           <li
             key={s.label}
-            className={`flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium border ${
+            className={`flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-medium ${
               state === "done"
-                ? "bg-green-50 border-green-200 text-green-700"
+                ? "border-green-200 bg-green-50 text-green-700"
                 : state === "current"
-                  ? "bg-brand text-white border-brand"
-                  : "bg-white border-stone-200 text-stone-400"
+                  ? "border-brand bg-brand text-white"
+                  : "border-stone-200 bg-white text-stone-400"
             }`}
           >
-            <span>{state === "done" ? "✓" : i + 1}</span>
+            {state === "done" ? (
+              <Check className="size-3.5" />
+            ) : (
+              <span>{i + 1}</span>
+            )}
             {s.label}
           </li>
         );

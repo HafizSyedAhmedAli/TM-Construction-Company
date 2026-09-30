@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Box, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export interface RenderState {
@@ -56,9 +57,12 @@ export function RenderPanel({
   }
 
   return (
-    <section className="border-t border-stone-200 pt-5">
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-semibold text-brand-black">
+    <section className="rounded-2xl border border-stone-200/70 bg-white/95 p-5 shadow-[0_10px_40px_-12px_rgba(35,31,30,0.12)] backdrop-blur sm:p-6">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h3 className="flex items-center gap-2.5 text-sm font-semibold text-brand-black">
+          <span className="grid size-7 place-items-center rounded-md border border-stone-200 bg-white">
+            <Box className="size-4" />
+          </span>
           3D Visualization
         </h3>
         {hasCadFile && (
@@ -85,42 +89,42 @@ export function RenderPanel({
       )}
 
       {status === "generating" && (
-        <p className="text-xs text-stone-400 mb-3">
+        <p className="mb-3 text-xs text-stone-400">
           Calling the AI image-generation service — this can take up to a
           minute. The BOQ is unaffected either way (NFR-7).
         </p>
       )}
 
       {error && (
-        <p className="text-sm text-red-600 mb-3" role="alert">
+        <p className="mb-3 text-sm text-red-600" role="alert">
           {error}
         </p>
       )}
 
       {render && (
-        <figure className="rounded-xl overflow-hidden border border-stone-200 bg-stone-100">
-          {/* eslint-disable-next-line @next/next/no-img-element -- served
-              from public/renders and overwritten in place on regenerate;
-              a cache-busting query param needs a plain <img>, not
-              next/image's static optimization. */}
-          <img
-            src={`${render.imageUrl}?t=${new Date(render.generatedAt).getTime()}`}
-            alt="AI-generated 3D visualization of the house design"
-            className="w-full h-auto block"
-          />
-          <figcaption className="px-3 py-2 text-xs text-stone-400 flex items-center justify-between gap-3">
-            <span>
+        <figure>
+          <div className="overflow-hidden rounded-xl border border-stone-200 bg-stone-100">
+            {/* eslint-disable-next-line @next/next/no-img-element -- served
+                from public/renders and overwritten in place on regenerate;
+                a cache-busting query param needs a plain <img>, not
+                next/image's static optimization. */}
+            <img
+              src={`${render.imageUrl}?t=${new Date(render.generatedAt).getTime()}`}
+              alt="AI-generated 3D visualization of the house design"
+              className="block h-auto w-full"
+            />
+          </div>
+          <figcaption className="mt-3 flex items-center justify-between gap-3 text-[11px] text-stone-400">
+            <span className="flex items-center gap-1.5">
+              <Camera className="size-3.5" />
               Generated{" "}
               {new Date(render.generatedAt).toLocaleString("en-PK", {
                 dateStyle: "medium",
                 timeStyle: "short",
               })}
             </span>
-            <span
-              className="italic truncate max-w-[60%]"
-              title={render.promptUsed}
-            >
-              {render.promptUsed}
+            <span className="italic" title={render.promptUsed}>
+              Photorealistic isometric floorplan
             </span>
           </figcaption>
         </figure>

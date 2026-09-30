@@ -20,8 +20,8 @@ export function BoqTable({ boq }: { boq: BOQResult }) {
           <tr>
             <th className="text-left px-3 py-2">Item</th>
             <th className="text-right px-3 py-2">Quantity</th>
-            <th className="text-right px-3 py-2">Rate (Rs)</th>
-            <th className="text-right px-3 py-2">Amount (Rs)</th>
+            <th className="min-w-[8.5rem] text-right px-3 py-2">Rate (Rs)</th>
+            <th className="min-w-[8.5rem] text-right px-3 py-2">Amount (Rs)</th>
           </tr>
         </thead>
         {groups.map((g) => (
@@ -64,26 +64,37 @@ export function BoqTable({ boq }: { boq: BOQResult }) {
             </tr>
           </tbody>
         ))}
-        <tfoot className="border-t-2 border-stone-300">
+        <tfoot className="bg-brand-black text-white [print-color-adjust:exact] [-webkit-print-color-adjust:exact]">
           <tr>
-            <td colSpan={3} className="px-3 py-1.5 text-right text-stone-600">
+            <td
+              colSpan={3}
+              className="px-3 pt-3 pb-1 text-right text-sm text-white/80"
+            >
               Subtotal
             </td>
-            <td className="px-3 py-1.5 text-right">
+            <td className="whitespace-nowrap px-3 pt-3 pb-1 text-right text-sm tabular-nums text-white">
               {formatPkr(boq.subtotal)}
             </td>
           </tr>
           <tr>
-            <td colSpan={3} className="px-3 py-1.5 text-right text-stone-600">
+            <td
+              colSpan={3}
+              className="px-3 py-1 text-right text-sm text-white/80"
+            >
               Sales tax ({taxPercent(boq)}%)
             </td>
-            <td className="px-3 py-1.5 text-right">{formatPkr(boq.tax)}</td>
+            <td className="whitespace-nowrap px-3 py-1 text-right text-sm tabular-nums text-white">
+              {formatPkr(boq.tax)}
+            </td>
           </tr>
-          <tr className="bg-brand-black text-white">
-            <td colSpan={3} className="px-3 py-2 text-right font-semibold">
+          <tr className="border-t border-white/15">
+            <td
+              colSpan={3}
+              className="px-3 py-3 text-right text-sm font-semibold text-white"
+            >
               Total estimated cost
             </td>
-            <td className="px-3 py-2 text-right font-bold">
+            <td className="whitespace-nowrap px-3 py-3 text-right text-base font-bold tabular-nums text-white">
               {formatPkr(boq.total)}
             </td>
           </tr>

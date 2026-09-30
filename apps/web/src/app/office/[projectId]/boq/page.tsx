@@ -7,6 +7,7 @@ import { prisma } from "@tmcc/db";
 import { BoqTable } from "@/components/BoqTable";
 import { PrintButton } from "@/components/PrintButton";
 import { ASSUMPTIONS, EXCLUSIONS } from "@/lib/boq-format";
+import { Download } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -53,7 +54,14 @@ export default async function BoqPrintPage({
         <Link href={`/office/${projectId}`} className="text-sm text-brand">
           ← Back to project
         </Link>
-        <PrintButton />
+        <a
+          href={`/api/projects/${projectId}/boq-pdf`}
+          download
+          className="print:hidden inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark"
+        >
+          <Download className="size-4" />
+          Download PDF
+        </a>
       </div>
 
       <header className="flex items-start justify-between border-b-2 border-brand pb-4 mb-6">
