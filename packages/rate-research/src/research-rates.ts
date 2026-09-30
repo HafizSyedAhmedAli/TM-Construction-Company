@@ -1,3 +1,4 @@
+// packages/rate-research/src/research-rates.ts
 import { generateText } from "ai";
 import { google } from "@ai-sdk/google";
 import type { Category, RateCardItem, RateItemType } from "@tmcc/shared-types";
@@ -12,19 +13,14 @@ import { parseRateResearch, type RateSource } from "./parse-research";
 
 // A full-size model. The "-lite" models are cheap but follow search + format
 // instructions poorly, which is what made small cities come back empty.
-export const DEFAULT_RATE_MODEL = "gemini-2.5-flash";
-const DEFAULT_FALLBACK_MODELS = ["gemini-2.5-pro"];
+export const DEFAULT_RATE_MODEL = "gemini-3.1-pro-preview";
 
-/** Primary model first, then fallbacks tried only if it finds nothing. */
-export function rateModelChain(): string[] {
-  const primary = process.env.AI_RATE_MODEL?.trim() || DEFAULT_RATE_MODEL;
-  const fallbacks = process.env.AI_RATE_FALLBACK_MODELS?.trim()
-    ? process.env.AI_RATE_FALLBACK_MODELS.split(",")
-        .map((m) => m.trim())
-        .filter(Boolean)
-    : DEFAULT_FALLBACK_MODELS;
-  return [...new Set([primary, ...fallbacks])];
-}
+/** The one model used for every search. Set AI_RATE_MODEL to change it. */
+export const rateModel = () =>
+  process.env.AI_RATE_MODEL?.trim() || DEFAULT_RATE_MODEL;
+
+const shorten = (msg: string, n = 300) =>
+  msg.length > n ? `${msg.slice(0, n)}...` : msg;
 
 const timeoutMs = () => Number(process.env.RATE_SEARCH_TIMEOUT_MS) || 60_000;
 
@@ -164,21 +160,19 @@ export async function researchRates(input: {
   const targets = targetsFor(input.itemTypes);
   const places = input.places ?? searchPlacesFor(input.city);
 
-  // Try the primary model, then each fallback, until one finds prices.
-  let lastError: unknown;
-  for (const modelId of rateModelChain()) {
-    try {
-      return await researchWithModel(
-        modelId,
-        { city: input.city, category: input.category, now },
-        targets,
-        places,
-      );
-    } catch (err) {
-      lastError = err;
-    }
+  const modelId = rateModel();
+  try {
+    return await researchWithModel(
+      modelId,
+      { city: input.city, category: input.category, now },
+      targets,
+      places,
+    );
+  } catch (err) {
+    // Name the model so the real reason is easy to spot in the error.
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(`[${modelId}] ${shorten(msg)}`);
   }
-  throw lastError instanceof Error ? lastError : new Error(String(lastError));
 }
 
 export class IncompleteRatesError extends Error {
@@ -227,7 +221,7 @@ export async function researchCompleteRates(input: {
         items: [],
         grounding: [],
         warnings: [],
-        model: process.env.AI_RATE_MODEL?.trim() || DEFAULT_RATE_MODEL,
+        model: rateModel(),
         searchedAt: now.toISOString(),
       },
     };
@@ -283,7 +277,9 @@ export async function researchCompleteRates(input: {
       missing,
       searchPlacesFor(input.city),
     );
-    if (failures.length) err.message += ` ${failures.join("; ")}`;
+    // Same failure repeats once per item; show each distinct reason once.
+    const distinct = [...new Set(failures)];
+    if (distinct.length) err.message += ` Reasons: ${distinct.join(" || ")}`;
     throw err;
   }
 

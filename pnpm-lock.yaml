@@ -20,6 +20,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@ai-sdk/google':
+        specifier: ^1.2.22
+        version: 1.2.22(zod@3.25.76)
       '@base-ui/react':
         specifier: ^1.4.1
         version: 1.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -44,6 +47,9 @@ importers:
       '@tmcc/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types
+      ai:
+        specifier: ^4.3.19
+        version: 4.3.19(react@19.3.0)(zod@3.25.76)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1

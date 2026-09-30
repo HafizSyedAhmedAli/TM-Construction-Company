@@ -1,6 +1,6 @@
 // packages/lead-intake/src/validate-lead.ts
 import type { Category, EngagementModel } from "@tmcc/shared-types";
-import { CITY_NAMES, findCity } from "@tmcc/shared-types";
+import { findCity } from "@tmcc/shared-types";
 import {
   BEDROOM_OPTIONS,
   BUDGET_RANGES,
@@ -15,9 +15,6 @@ import {
 
 const MODELS: EngagementModel[] = [1, 2, 3];
 const CATEGORIES: Category[] = ["A", "B", "C"];
-
-export const CITIES: readonly string[] = CITY_NAMES;
-export type City = string;
 
 export interface LeadIntakeInput {
   // Step 1 — project details

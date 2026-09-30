@@ -1,11 +1,10 @@
 // apps/web/src/components/intake/StepProjectDetails.tsx
-import { MapPin, Phone, User } from "lucide-react";
-import { CITIES } from "@tmcc/lead-intake";
-import { SelectField, TextField } from "./fields";
-import { OptionCards } from "./OptionCards";
-import { MODEL_OPTIONS } from "./option-config";
-import type { StepProps } from "./types";
 import { CITY_NAMES } from "@tmcc/shared-types";
+import { MapPin, Phone, User } from "lucide-react";
+import { SelectField, TextField } from "./fields";
+import { MODEL_OPTIONS } from "./option-config";
+import { OptionCards } from "./OptionCards";
+import type { StepProps } from "./types";
 
 export function StepProjectDetails({ values, errors, setField }: StepProps) {
   return (

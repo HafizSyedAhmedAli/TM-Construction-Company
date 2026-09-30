@@ -1,20 +1,18 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
-import {
-  citiesByProvince,
-  CITY_NAMES,
-  type Category,
-  type EngagementModel,
-} from "@tmcc/shared-types";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
-  NativeSelect,
-  NativeSelectOptGroup,
-  NativeSelectOption,
+    NativeSelect,
+    NativeSelectOption
 } from "@/components/ui/native-select";
+import {
+    CITY_NAMES,
+    type Category,
+    type EngagementModel
+} from "@tmcc/shared-types";
+import { useRouter } from "next/navigation";
+import { useState, type FormEvent } from "react";
 
 interface ConvertLeadFormProps {
   leadId: string;
@@ -22,8 +20,6 @@ interface ConvertLeadFormProps {
   defaultModel: number;
   defaultCategory: string;
 }
-
-const CITY_GROUPS = citiesByProvince();
 
 // SRS §3 steps 3-5: by the time office is looking at this form, they've
 // already met the client and finalized the design brief — city/model/
