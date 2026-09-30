@@ -24,7 +24,17 @@ const DAY_MS = 86_400_000;
 
 // Finds the first balanced [...] in the text that parses as JSON. Tolerates
 // code fences, prose around the array, and "[" / "]" inside string values.
-function extractJsonArray(text: string): unknown[] {
+function extractJsonArray(input: unknown): unknown[] {
+  // Workers AI can return an already-parsed array/object instead of a string.
+  if (Array.isArray(input)) return input;
+  if (input && typeof input === "object") {
+    const obj = input as Record<string, unknown>;
+    for (const k of ["items", "rates", "prices", "results", "data"]) {
+      if (Array.isArray(obj[k])) return obj[k] as unknown[];
+    }
+    input = JSON.stringify(input);
+  }
+  const text = typeof input === "string" ? input : String(input ?? "");
   const clean = text.replace(/```(?:json)?/gi, "");
   for (
     let start = clean.indexOf("[");
@@ -71,7 +81,7 @@ const str = (v: unknown) =>
 // Gemini can't return structured JSON mode while the search tool is on,
 // so we ask for JSON in plain text and validate every field ourselves.
 export function parseRateResearch(
-  text: string,
+  text: unknown, // was: string
   now: Date = new Date(),
   targets: RateTarget[] = RATE_TARGETS,
 ): ParsedRates {

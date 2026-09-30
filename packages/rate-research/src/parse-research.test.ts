@@ -67,3 +67,9 @@ describe("parseRateResearch", () => {
     expect(() => parseRateResearch("[not json]", NOW)).toThrow(/valid JSON/);
   });
 });
+
+it("accepts an already-parsed array or wrapped object (Workers AI)", () => {
+  const rows = [row({})];
+  expect(parseRateResearch(rows, NOW).items).toHaveLength(1);
+  expect(parseRateResearch({ items: rows }, NOW).items).toHaveLength(1);
+});

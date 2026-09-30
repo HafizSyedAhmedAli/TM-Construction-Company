@@ -58,10 +58,12 @@ async function cloudflareLlm(prompt: string): Promise<string> {
       `Cloudflare LLM failed (${res.status}): ${d.slice(0, 200)}`,
     );
   }
-  const json = (await res.json()) as { result?: { response?: string } };
-  const text = json.result?.response;
-  if (!text) throw new Error("Cloudflare LLM returned no text.");
-  return text;
+  const json = (await res.json()) as { result?: { response?: unknown } };
+  const raw = json.result?.response;
+  if (raw == null || raw === "")
+    throw new Error("Cloudflare LLM returned no text.");
+  // Llama on Workers AI may return a parsed array/object rather than a string.
+  return typeof raw === "string" ? raw : JSON.stringify(raw);
 }
 
 export async function searchAndExtract(input: {
@@ -94,7 +96,7 @@ export async function searchAndExtract(input: {
       const body = results
         .map(
           (r, i) =>
-            `  [${i + 1}] ${r.title} | ${r.url}\n  ${r.content.slice(0, 500)}`,
+            `  [${i + 1}] ${r.title} | ${r.url}\n  ${String(r.content ?? "").slice(0, 500)}`,
         )
         .join("\n");
       const derive = target.derive ? ` ${target.derive}.` : "";
