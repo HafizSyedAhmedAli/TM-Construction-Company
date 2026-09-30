@@ -1,4 +1,4 @@
-import { RATE_ITEM_TYPES } from "@tmcc/shared-types";
+import { isUnsearchedType, RATE_ITEM_TYPES } from "@tmcc/shared-types";
 import type { RateCard, RateItemType } from "@tmcc/shared-types";
 
 // There are deliberately NO built-in rates here. Every unit rate on a BOQ
@@ -12,7 +12,7 @@ export const DEFAULT_TAX_PERCENT = 17;
 /** Item types a rate card still needs before it can price a full BOQ. */
 export function missingItemTypes(card: RateCard | undefined): RateItemType[] {
   const have = new Set(card?.items.map((i) => i.itemType));
-  return RATE_ITEM_TYPES.filter((t) => !have.has(t));
+  return RATE_ITEM_TYPES.filter((t) => !isUnsearchedType(t) && !have.has(t));
 }
 
 export const isCompleteRateCard = (card: RateCard | undefined): boolean =>

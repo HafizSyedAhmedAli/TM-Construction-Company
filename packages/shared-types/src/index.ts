@@ -34,6 +34,19 @@ export interface Geometry {
   openings: Opening[];
 }
 
+// Not searched and not required on a rate card. Almost no source publishes
+// these as a per-sqft rate, so a live search cannot price them honestly. A
+// BOQ built from a card without them simply has no foundation / electrical
+// line; office can still add them by hand on the Rates page and they will be
+// priced.
+export const UNSEARCHED_TYPES = [
+  "foundation",
+  "electrical",
+] as const satisfies readonly RateItemType[];
+
+export const isUnsearchedType = (t: RateItemType): boolean =>
+  (UNSEARCHED_TYPES as readonly string[]).includes(t);
+
 export interface RateCardItem {
   itemType: RateItemType;
   unitRate: number;

@@ -70,7 +70,7 @@ describe("validateProjectDetails — FR-3 required fields", () => {
 
 describe("validateProjectDetails — FR-4 predefined lists", () => {
   it("rejects a city not in the predefined list", () => {
-    const result = validateProjectDetails({ ...validInput, city: "Islamabad" });
+    const result = validateProjectDetails({ ...validInput, city: "Atlantis" });
     expect(result.valid).toBe(false);
     expect(result.errors.city).toMatch(/not a supported city/i);
   });

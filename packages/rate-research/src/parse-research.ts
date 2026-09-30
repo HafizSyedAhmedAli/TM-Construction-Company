@@ -75,6 +75,23 @@ function toPrice(v: unknown): number | null {
     : null;
 }
 
+const squash = (v: unknown) =>
+  String(v ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+
+// The model should return the exact itemType key. If it returns the key in
+// another case or spacing, or the target's label, still accept it. Anything
+// else (a product name, a SKU) is ignored, never guessed.
+function findTarget(raw: unknown, targets: RateTarget[]) {
+  const k = squash(raw);
+  if (!k) return undefined;
+  return (
+    targets.find((t) => squash(t.itemType) === k) ??
+    targets.find((t) => squash(t.label) === k)
+  );
+}
+
 const str = (v: unknown) =>
   typeof v === "string" && v.trim() ? v.trim() : null;
 
@@ -92,7 +109,7 @@ export function parseRateResearch(
 
   for (const raw of rows) {
     const r = (raw ?? {}) as Record<string, unknown>;
-    const target = targets.find((t) => t.itemType === r.itemType);
+    const target = findTarget(r.itemType, targets);
     if (!target) {
       warnings.push(`Ignored unknown item "${String(r.itemType)}"`);
       continue;

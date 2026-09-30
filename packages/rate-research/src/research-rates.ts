@@ -1,6 +1,6 @@
 // packages/rate-research/src/research-rates.ts
 import type { Category, RateCardItem, RateItemType } from "@tmcc/shared-types";
-import { isFixedLabourType, searchPlacesFor } from "@tmcc/shared-types";
+import { isFixedLabourType, isUnsearchedType, searchPlacesFor } from "@tmcc/shared-types";
 import {
   ALL_RATE_ITEM_TYPES,
   MATERIAL_TYPES,
@@ -123,8 +123,9 @@ export async function researchCompleteRates(input: {
 }): Promise<ResearchResult> {
   // Fixed TMCC labour rates are never searched, even if asked for.
   const wanted = (input.itemTypes ?? ALL_RATE_ITEM_TYPES).filter(
-    (t) => !isFixedLabourType(t),
+    (t) => !isFixedLabourType(t) && !isUnsearchedType(t),
   );
+
   if (wanted.length === 0) {
     const now = input.now ?? new Date();
     return {
@@ -182,7 +183,11 @@ export async function researchCompleteRates(input: {
   };
 
   if (missing.length > 0) await retryEach();
-  if (missing.length > 0) await retryEach(["Pakistan (national average)"]);
+  // Walk the rest of the ladder: nearby markets, province hubs, then national.
+  for (const place of searchPlacesFor(input.city).slice(1)) {
+    if (missing.length === 0) break;
+    await retryEach([place]);
+  }
 
   if (missing.length > 0) {
     const err = new IncompleteRatesError(

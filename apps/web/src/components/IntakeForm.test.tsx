@@ -139,7 +139,7 @@ describe("IntakeForm — wizard", () => {
       screen.getByRole("option", { name: "Hyderabad" }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("option", { name: "Islamabad" }),
+      screen.queryByRole("option", { name: "Atlantis" }),
     ).not.toBeInTheDocument();
     expect(screen.getAllByRole("radio")).toHaveLength(3);
   });

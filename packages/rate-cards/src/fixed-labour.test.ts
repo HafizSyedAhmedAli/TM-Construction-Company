@@ -47,17 +47,9 @@ describe("withFixedLabour", () => {
     expect([fc("A"), fc("B"), fc("C")]).toEqual([350, 275, 200]);
   });
 
-  it("leaves only the 8 searched items missing", () => {
+  it("leaves only the searched items missing (foundation and electrical are not searched)", () => {
     expect(missingItemTypes(withFixedLabour(card("B"))).sort()).toEqual(
-      [
-        "brick",
-        "electrical",
-        "foundation",
-        "paint",
-        "rccRoof",
-        "sand",
-        "steelMaterial",
-      ].sort(),
+      ["brick", "paint", "rccRoof", "sand", "steelMaterial"].sort(),
     );
   });
 });
