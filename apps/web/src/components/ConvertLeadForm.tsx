@@ -3,14 +3,22 @@
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
-    NativeSelect,
-    NativeSelectOption
+  NativeSelect,
+  NativeSelectOption,
 } from "@/components/ui/native-select";
 import {
-    CITY_NAMES,
-    type Category,
-    type EngagementModel
+  CITY_NAMES,
+  type Category,
+  type EngagementModel,
 } from "@tmcc/shared-types";
+import {
+  ArrowRight,
+  FileText,
+  LayoutGrid,
+  MapPin,
+  Plus,
+  StickyNote,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
@@ -69,17 +77,22 @@ export function ConvertLeadForm({
     }
   }
 
+  const labelCls =
+    "flex items-center gap-2 text-sm font-semibold text-stone-600";
+  const selectCls =
+    "mt-2 w-full cursor-pointer [&_select]:h-12 [&_select]:rounded-xl [&_select]:border-stone-200 [&_select]:bg-white [&_select]:px-4 [&_select]:text-[15px] [&_select]:text-brand-black [&_select]:shadow-sm [&_select:hover]:border-stone-300 [&_select:focus-visible]:border-brand [&_select:focus-visible]:ring-brand/20 [&_svg]:right-4";
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-3">
-      <div className="grid grid-cols-3 gap-2">
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="grid gap-5 sm:grid-cols-[1.4fr_1fr_1fr]">
         <div>
-          <Label htmlFor={`city-${leadId}`} className="text-xs">
+          <Label htmlFor={`city-${leadId}`} className={labelCls}>
+            <MapPin className="size-4 text-brand" />
             City
           </Label>
           <NativeSelect
             id={`city-${leadId}`}
-            size="sm"
-            className="mt-1 w-full cursor-pointer"
+            className={selectCls}
             value={city}
             onChange={(e) => setCity(e.target.value)}
           >
@@ -91,13 +104,13 @@ export function ConvertLeadForm({
           </NativeSelect>
         </div>
         <div>
-          <Label htmlFor={`model-${leadId}`} className="text-xs">
+          <Label htmlFor={`model-${leadId}`} className={labelCls}>
+            <FileText className="size-4 text-brand" />
             Model
           </Label>
           <NativeSelect
             id={`model-${leadId}`}
-            size="sm"
-            className="mt-1 w-full cursor-pointer"
+            className={selectCls}
             value={model}
             onChange={(e) =>
               setModel(Number(e.target.value) as EngagementModel)
@@ -109,13 +122,13 @@ export function ConvertLeadForm({
           </NativeSelect>
         </div>
         <div>
-          <Label htmlFor={`category-${leadId}`} className="text-xs">
+          <Label htmlFor={`category-${leadId}`} className={labelCls}>
+            <LayoutGrid className="size-4 text-brand" />
             Category
           </Label>
           <NativeSelect
             id={`category-${leadId}`}
-            size="sm"
-            className="mt-1 w-full cursor-pointer"
+            className={selectCls}
             value={category}
             onChange={(e) => setCategory(e.target.value as Category)}
           >
@@ -127,13 +140,14 @@ export function ConvertLeadForm({
       </div>
 
       <div>
-        <Label htmlFor={`notes-${leadId}`} className="text-xs">
+        <Label htmlFor={`notes-${leadId}`} className={labelCls}>
+          <StickyNote className="size-4 text-brand" />
           Meeting notes (optional)
         </Label>
         <textarea
           id={`notes-${leadId}`}
-          rows={2}
-          className="mt-1 w-full rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+          rows={3}
+          className="mt-2 w-full resize-y rounded-xl border border-stone-200 bg-white px-4 py-3 text-[15px] text-brand-black shadow-sm outline-none transition placeholder:text-stone-400 hover:border-stone-300 focus-visible:border-brand focus-visible:ring-3 focus-visible:ring-brand/20"
           placeholder="Design brief, plot details, anything from the meeting worth keeping on the project…"
           value={meetingNotes}
           onChange={(e) => setMeetingNotes(e.target.value)}
@@ -141,7 +155,10 @@ export function ConvertLeadForm({
       </div>
 
       {error && (
-        <p className="text-xs text-red-600" role="alert">
+        <p
+          className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600"
+          role="alert"
+        >
           {error}
         </p>
       )}
@@ -149,10 +166,13 @@ export function ConvertLeadForm({
       <Button
         type="submit"
         disabled={isSubmitting}
-        size="sm"
-        className="bg-brand hover:bg-brand-dark text-white cursor-pointer disabled:cursor-not-allowed"
+        className="h-12 cursor-pointer gap-3 rounded-xl bg-brand px-4 text-[15px] font-semibold text-white shadow-md shadow-brand/30 hover:bg-brand-dark disabled:cursor-not-allowed"
       >
+        <span className="flex size-6 items-center justify-center rounded-full bg-white text-brand">
+          <Plus className="size-4" />
+        </span>
         {isSubmitting ? "Creating…" : "Create project"}
+        <ArrowRight className="size-4" />
       </Button>
     </form>
   );
