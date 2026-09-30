@@ -38,7 +38,13 @@ const GRAY = "#78716c";
 const LINE = "#e7e5e4";
 
 const s = StyleSheet.create({
-  page: { padding: 32, fontSize: 9, color: BLACK, fontFamily: "Helvetica" },
+  page: {
+    padding: 32,
+    paddingBottom: 48,
+    fontSize: 9,
+    color: BLACK,
+    fontFamily: "Helvetica",
+  },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -119,8 +125,14 @@ const s = StyleSheet.create({
     borderTopColor: "#57534e",
   },
   perSqft: { textAlign: "right", color: GRAY, marginTop: 4, fontSize: 8 },
-  notes: { flexDirection: "row", gap: 24, marginTop: 16 },
-  notesCol: { flex: 1 },
+  notes: { flexDirection: "row", gap: 12, marginTop: 16 },
+  notesCol: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: LINE,
+    backgroundColor: "#fafaf9",
+    padding: 8,
+  },
   notesTitle: { fontFamily: "Helvetica-Bold", fontSize: 9, marginBottom: 4 },
   bullet: { fontSize: 7.5, color: "#57534e", marginBottom: 2, lineHeight: 1.4 },
   sign: { flexDirection: "row", gap: 60, marginTop: 44 },
@@ -132,6 +144,16 @@ const s = StyleSheet.create({
     fontSize: 8,
     color: GRAY,
   },
+  footer: {
+    position: "absolute",
+    bottom: 18,
+    left: 32,
+    right: 32,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    fontSize: 7,
+    color: GRAY,
+  },
 });
 
 function BoqPdf({ d }: { d: BoqPdfData }) {
@@ -141,6 +163,7 @@ function BoqPdf({ d }: { d: BoqPdfData }) {
   return (
     <Document title={`BOQ - ${d.clientName}`} author="TM Construction Company">
       <Page size="A4" style={s.page}>
+        {/* Letterhead: fixed on purpose, repeats on every page */}
         <View style={s.header} fixed>
           {d.logo ? (
             // eslint-disable-next-line jsx-a11y/alt-text -- react-pdf Image has no alt
@@ -176,7 +199,8 @@ function BoqPdf({ d }: { d: BoqPdfData }) {
           ))}
         </View>
 
-        <View style={s.thead} fixed>
+        {/* Not `fixed`: it appears once, so page 2 never shows a stray header */}
+        <View style={s.thead}>
           <Text style={[s.th, s.cItem]}>ITEM</Text>
           <Text style={[s.th, s.cQty]}>QUANTITY</Text>
           <Text style={[s.th, s.cRate]}>RATE (RS)</Text>
@@ -249,28 +273,42 @@ function BoqPdf({ d }: { d: BoqPdfData }) {
           (incl. tax)
         </Text>
 
-        <View style={s.notes} wrap={false}>
-          <View style={s.notesCol}>
-            <Text style={s.notesTitle}>Basis of estimate</Text>
-            {ASSUMPTIONS.map((a) => (
-              <Text key={a} style={s.bullet}>
-                - {a}
-              </Text>
-            ))}
+        {/* Notes + signatures move to page 2 together if they don't fit */}
+        <View wrap={false}>
+          <View style={s.notes}>
+            <View style={s.notesCol}>
+              <Text style={s.notesTitle}>Basis of estimate</Text>
+              {ASSUMPTIONS.map((a) => (
+                <Text key={a} style={s.bullet}>
+                  - {a}
+                </Text>
+              ))}
+            </View>
+            <View style={s.notesCol}>
+              <Text style={s.notesTitle}>Not included</Text>
+              {EXCLUSIONS.map((a) => (
+                <Text key={a} style={s.bullet}>
+                  - {a}
+                </Text>
+              ))}
+            </View>
           </View>
-          <View style={s.notesCol}>
-            <Text style={s.notesTitle}>Not included</Text>
-            {EXCLUSIONS.map((a) => (
-              <Text key={a} style={s.bullet}>
-                - {a}
-              </Text>
-            ))}
+
+          <View style={s.sign}>
+            <Text style={s.signBox}>For TM Construction Company</Text>
+            <Text style={s.signBox}>Client acceptance</Text>
           </View>
         </View>
 
-        <View style={s.sign} wrap={false}>
-          <Text style={s.signBox}>For TM Construction Company</Text>
-          <Text style={s.signBox}>Client acceptance</Text>
+        <View style={s.footer} fixed>
+          <Text>
+            TM Construction Company - Bill of Quantities &amp; Cost Estimate
+          </Text>
+          <Text
+            render={({ pageNumber, totalPages }) =>
+              `Page ${pageNumber} of ${totalPages}`
+            }
+          />
         </View>
       </Page>
     </Document>
