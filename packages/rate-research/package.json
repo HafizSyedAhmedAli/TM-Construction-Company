@@ -4,9 +4,7 @@
   "main": "src/index.ts",
   "types": "src/index.ts",
   "dependencies": {
-    "@tmcc/shared-types": "workspace:*",
-    "@ai-sdk/google": "^1.0.0",
-    "ai": "^4.0.0"
+    "@tmcc/shared-types": "workspace:*"
   },
   "devDependencies": {
     "vitest": "^2.1.0",
