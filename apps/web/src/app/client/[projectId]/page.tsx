@@ -1,10 +1,27 @@
 // apps/web/src/app/client/[projectId]/page.tsx
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import type { BOQResult } from "@tmcc/shared-types";
+import {
+  Box,
+  Download,
+  Home,
+  Info,
+  Layers,
+  MapPin,
+  Phone,
+  Receipt,
+  Ruler,
+  ShieldCheck,
+  Tag,
+  User,
+} from "lucide-react";
+import type { ReactNode } from "react";
+import type { BOQResult, Geometry } from "@tmcc/shared-types";
 import { prisma } from "@tmcc/db";
-import { PrintButton } from "@/components/PrintButton";
-import { formatPkr, groupBoq, taxPercent } from "@/lib/boq-format";
+import { BoqTable } from "@/components/BoqTable";
+import { ClientGallery } from "@/components/ClientGallery";
+import { SiteFooter } from "@/components/SiteFooter";
+import { ASSUMPTIONS, EXCLUSIONS, formatPkr } from "@/lib/boq-format";
 
 const MODEL_LABELS: Record<number, string> = {
   1: "Land & Build, Then Sell",
@@ -12,11 +29,37 @@ const MODEL_LABELS: Record<number, string> = {
   3: "Your Plot & Your Construction Cost",
 };
 
-// FR-20: "Client shall see only their own Project's render and final cost
-// summary" — deliberately does NOT show BOQ line items, meeting notes,
-// rate-card internals, or raw geometry; those stay on the office dashboard.
-// No auth yet (FR-20's access control isn't built), so for now this is
-// reachable by anyone with the link, same as every other route in this app.
+// NOTE: this page now shows the full BOQ line items, the client's phone number
+// and a PDF download, as in the approved mockup. There is still no auth
+// (FR-20 access control isn't built), so anyone with the link can see it.
+
+function DetailRow({
+  icon,
+  label,
+  children,
+}: {
+  icon: ReactNode;
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-4 py-3.5 first:pt-0 last:pb-0">
+      <span className="grid size-11 shrink-0 place-items-center rounded-full border border-stone-200 bg-white text-brand-black">
+        {icon}
+      </span>
+      <div className="min-w-0">
+        <p className="text-xs text-stone-400">{label}</p>
+        <p className="text-sm font-semibold leading-snug text-brand-black">
+          {children}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+const card =
+  "rounded-3xl border border-stone-200/70 bg-white/95 shadow-[0_10px_40px_-12px_rgba(35,31,30,0.12)] backdrop-blur";
+
 export default async function ClientProjectPage({
   params,
 }: {
@@ -35,102 +78,205 @@ export default async function ClientProjectPage({
     ? (project.cadFile.boq as unknown as BOQResult)
     : null;
 
+  const geometry = project.cadFile?.geometry
+    ? (project.cadFile.geometry as unknown as Geometry)
+    : null;
+  const areaSqFt = geometry
+    ? Math.round(geometry.rooms.reduce((s, r) => s + r.area, 0))
+    : null;
+
   // Real render when one exists, otherwise the demo image so the page is
   // never empty (e.g. while the AI image service is unavailable).
-  const imageSrc = project.render?.imageUrl ?? "/demo.jpg";
+  const images = [
+    {
+      src: project.render?.imageUrl ?? "/demo.jpg",
+      alt: "3D visualization of your house design",
+    },
+  ];
+
+  const modelLabel = MODEL_LABELS[project.model] ?? `Model ${project.model}`;
 
   return (
-    <main className="min-h-screen px-4 py-12 bg-stone-50">
-      <div className="max-w-2xl mx-auto">
-        <div className="flex flex-col items-center mb-8">
+    <>
+      {/* Header */}
+      <header className="print:hidden border-b border-stone-100 bg-white/90 backdrop-blur">
+        <div className="mx-auto flex h-[72px] max-w-6xl items-center justify-between px-4">
           <Image
             src="/tmcc-logo-full.png"
             alt="TM Construction Company"
             width={520}
             height={119}
-            className="h-14 w-auto mb-6"
+            className="h-11 w-auto"
             priority
           />
-          <h1 className="text-2xl font-bold text-brand-black text-center">
-            Your House, Visualized
-          </h1>
-          <p className="text-sm text-stone-500 mt-1 text-center">
-            {project.city} ·{" "}
-            {MODEL_LABELS[project.model] ?? `Model ${project.model}`}
-          </p>
+          <a
+            href="tel:03003212117"
+            className="flex items-center gap-2 text-sm font-semibold text-brand-black"
+          >
+            <Phone className="size-4 text-brand" />
+            0300-3212117
+          </a>
         </div>
+      </header>
 
-        <div className="bg-white border border-stone-200 rounded-xl shadow-sm overflow-hidden">
-          {/* eslint-disable-next-line @next/next/no-img-element -- served
-              from public/ and regenerated in place; needs a plain <img>,
-              not next/image's static optimization. */}
-          <img
-            src={imageSrc}
-            alt="3D visualization of your house design"
-            className="w-full h-auto block"
-          />
+      <main className="relative overflow-hidden bg-gradient-to-b from-stone-50 to-white pb-16">
+        {/* Hero picture, faded into the page */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/demo.jpg"
+          alt=""
+          aria-hidden
+          className="pointer-events-none absolute right-0 top-0 hidden h-[260px] w-[55%] object-cover opacity-90 lg:block [mask-image:linear-gradient(to_right,transparent,black_45%)]"
+        />
 
-          <div className="p-6">
+        <div className="relative mx-auto max-w-6xl px-4 pt-10 sm:px-6">
+          {/* Heading */}
+          <div className="mb-8">
+            <h1 className="text-4xl font-extrabold tracking-tight text-brand-black sm:text-5xl">
+              Your House, <span className="text-brand">Visualized</span>
+            </h1>
+            <p className="mt-3 flex items-center gap-2 text-sm text-stone-600">
+              <MapPin className="size-4 text-brand" />
+              {project.city} · {modelLabel}
+            </p>
+          </div>
+
+          {/* Gallery + project details */}
+          <div className="grid items-start gap-6 lg:grid-cols-[1fr_340px]">
+            <section className={`${card} p-4 sm:p-5`}>
+              <ClientGallery images={images} />
+            </section>
+
+            <aside className={`${card} p-6`}>
+              <div className="mb-5 flex items-center gap-3">
+                <span className="grid size-10 place-items-center rounded-full bg-red-50 text-brand">
+                  <Home className="size-5" />
+                </span>
+                <h2 className="font-bold text-brand-black">Project Details</h2>
+              </div>
+
+              <div className="divide-y divide-stone-100">
+                <DetailRow icon={<User className="size-5" />} label="Client">
+                  {project.lead.name}
+                </DetailRow>
+                <DetailRow icon={<MapPin className="size-5" />} label="City">
+                  {project.city}
+                </DetailRow>
+                <DetailRow icon={<Tag className="size-5" />} label="Category">
+                  Model {project.model} — {modelLabel}
+                </DetailRow>
+                <DetailRow icon={<Phone className="size-5" />} label="Contact">
+                  {project.lead.contact}
+                </DetailRow>
+                <DetailRow
+                  icon={<Layers className="size-5" />}
+                  label="Material category"
+                >
+                  Category {project.category}
+                </DetailRow>
+                {areaSqFt !== null && (
+                  <DetailRow
+                    icon={<Ruler className="size-5" />}
+                    label="Covered area"
+                  >
+                    {areaSqFt.toLocaleString("en-PK")} sq ft
+                  </DetailRow>
+                )}
+              </div>
+
+              {boq && (
+                <a
+                  href={`/api/projects/${projectId}/boq-pdf`}
+                  download
+                  className="print:hidden mt-6 flex items-center gap-4 rounded-2xl bg-red-50 px-4 py-4 transition hover:bg-red-100/70"
+                >
+                  <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-white text-brand shadow-sm">
+                    <Download className="size-5" />
+                  </span>
+                  <span>
+                    <span className="block text-sm font-semibold text-brand">
+                      Print / Save as PDF
+                    </span>
+                    <span className="block text-xs leading-snug text-stone-500">
+                      Download or print the project details and cost estimate.
+                    </span>
+                  </span>
+                </a>
+              )}
+            </aside>
+          </div>
+
+          {/* Cost summary */}
+          <section className={`${card} mt-6 p-5 sm:p-7`}>
+            <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+              <div className="flex items-start gap-4">
+                <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-red-50 text-brand">
+                  <Receipt className="size-6" />
+                </span>
+                <div>
+                  <h2 className="text-xl font-bold text-brand-black">
+                    Cost Summary
+                  </h2>
+                  {boq && (
+                    <p className="mt-1 max-w-md text-sm text-stone-500">
+                      Based on your approved drawing and Category{" "}
+                      {project.category} materials in {project.city}. Final
+                      contract price is confirmed after site inspection.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {boq && (
+                <div className="rounded-2xl bg-red-50 px-6 py-4 text-right">
+                  <p className="text-sm text-brand">Total Estimated Cost</p>
+                  <p className="mt-0.5 text-2xl font-extrabold text-brand">
+                    {formatPkr(boq.total)}
+                  </p>
+                </div>
+              )}
+            </div>
+
             {boq ? (
-              <>
-                <h2 className="text-sm font-semibold text-brand-black mb-3">
-                  Cost Summary
-                </h2>
-                <div className="space-y-1 text-sm">
-                  {groupBoq(boq).map((g) => (
-                    <div
-                      key={g.group}
-                      className="flex justify-between text-stone-600"
-                    >
-                      <span>{g.group}</span>
-                      <span>{formatPkr(g.subtotal)}</span>
-                    </div>
-                  ))}
-                  <div className="flex justify-between text-stone-500 pt-2 border-t border-stone-100 mt-2">
-                    <span>Sales tax ({taxPercent(boq)}%)</span>
-                    <span>{formatPkr(boq.tax)}</span>
-                  </div>
-                  <div className="flex justify-between text-lg font-bold text-brand-black pt-2 border-t border-stone-100 mt-2">
-                    <span>Total estimated cost</span>
-                    <span>{formatPkr(boq.total)}</span>
-                  </div>
-                </div>
-                <p className="text-xs text-stone-400 mt-3">
-                  Based on your approved drawing and Category {project.category}{" "}
-                  materials in {project.city}. Final contract price is confirmed
-                  after site inspection.
-                </p>
-                <div className="mt-4">
-                  <PrintButton label="Print / Save this summary" />
-                </div>
-              </>
+              <BoqTable boq={boq} />
             ) : (
-              <p className="text-sm text-stone-400">
+              <p className="rounded-xl border border-dashed border-stone-300 px-4 py-10 text-center text-sm text-stone-400">
                 Your final cost estimate is being finalized by our office and
                 will appear here shortly.
               </p>
             )}
-          </div>
-        </div>
 
-        <p className="text-xs text-stone-400 mt-8 text-center">
-          Questions about this estimate? Reach us at{" "}
-          <a
-            href="tel:03003212117"
-            className="text-brand hover:text-brand-dark"
-          >
-            0300-3212117
-          </a>{" "}
-          or{" "}
-          <a
-            href="mailto:tmcc@gmail.com"
-            className="text-brand hover:text-brand-dark"
-          >
-            tmcc@gmail.com
-          </a>
-          .
-        </p>
-      </div>
-    </main>
+            {boq && (
+              <div className="mt-6 grid gap-4 md:grid-cols-2">
+                <div className="rounded-2xl bg-stone-50 p-5">
+                  <h3 className="mb-3 flex items-center gap-2.5 text-sm font-semibold text-brand-black">
+                    <ShieldCheck className="size-5 text-brand-black" />
+                    Basis of estimate
+                  </h3>
+                  <ul className="list-disc space-y-1 pl-9 text-xs leading-relaxed text-stone-500">
+                    {ASSUMPTIONS.map((a) => (
+                      <li key={a}>{a}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="rounded-2xl bg-stone-50 p-5">
+                  <h3 className="mb-3 flex items-center gap-2.5 text-sm font-semibold text-brand-black">
+                    <Info className="size-5 text-brand-black" />
+                    Not included
+                  </h3>
+                  <ul className="list-disc space-y-1 pl-9 text-xs leading-relaxed text-stone-500">
+                    {EXCLUSIONS.map((a) => (
+                      <li key={a}>{a}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
+          </section>
+        </div>
+      </main>
+
+      <SiteFooter />
+    </>
   );
 }

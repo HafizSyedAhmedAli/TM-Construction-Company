@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ChangeEvent } from "react";
+import { useEffect, useState, type ChangeEvent } from "react";
 import type {
   BOQResult,
   Geometry,
@@ -11,8 +11,10 @@ import type {
 import {
   BrickWall,
   Calculator,
+  CircleCheck,
   DoorOpen,
   GripVertical,
+  Loader2,
   Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -38,6 +40,10 @@ interface CadReviewPanelProps {
   onBoqChange?: (boq: BOQResult | null) => void;
   /** Set false when the parent renders the BOQ itself (project page layout). */
   showBoq?: boolean;
+  /** Called when a calculation starts/stops, so the parent can show a loader. */
+  onCalculatingChange?: (calculating: boolean) => void;
+  /** Element id to scroll to once the BOQ is ready. */
+  boqAnchorId?: string;
 }
 
 type Status = "idle" | "uploading" | "reviewing" | "saving" | "calculating";
@@ -61,6 +67,8 @@ export function CadReviewPanel({
   onGeometryUploaded,
   onBoqChange,
   showBoq = true,
+  onCalculatingChange,
+  boqAnchorId = "boq-section",
 }: CadReviewPanelProps) {
   const [geometry, setGeometry] = useState<Geometry | null>(initialGeometry);
   const [boq, setBoq] = useState<BOQResult | null>(initialBoq);
@@ -70,6 +78,22 @@ export function CadReviewPanel({
     initialGeometry ? "reviewing" : "idle",
   );
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [dirty, setDirty] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+
+  const busy =
+    status === "uploading" || status === "saving" || status === "calculating";
+
+  // Live seconds counter so a long price search never looks frozen.
+  useEffect(() => {
+    if (status !== "calculating") {
+      setElapsed(0);
+      return;
+    }
+    const t = setInterval(() => setElapsed((s) => s + 1), 1000);
+    return () => clearInterval(t);
+  }, [status]);
 
   async function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -77,6 +101,7 @@ export function CadReviewPanel({
 
     setStatus("uploading");
     setError(null);
+    setNotice(null);
     setBoq(null);
     onBoqChange?.(null);
 
@@ -92,6 +117,7 @@ export function CadReviewPanel({
       if (!res.ok) throw new Error(body.error ?? "Upload failed.");
       setGeometry(body.geometry as Geometry);
       setFileName(file.name);
+      setDirty(false);
       setStatus("reviewing");
       onGeometryUploaded?.();
     } catch (err) {
@@ -103,6 +129,7 @@ export function CadReviewPanel({
   }
 
   function updateRoom(index: number, patch: Partial<Room>) {
+    setDirty(true);
     setGeometry((g) =>
       g
         ? {
@@ -116,6 +143,7 @@ export function CadReviewPanel({
   }
 
   function updateWall(index: number, patch: Partial<Wall>) {
+    setDirty(true);
     setGeometry((g) =>
       g
         ? {
@@ -129,12 +157,14 @@ export function CadReviewPanel({
   }
 
   function removeRoom(index: number) {
+    setDirty(true);
     setGeometry((g) =>
       g ? { ...g, rooms: g.rooms.filter((_, i) => i !== index) } : g,
     );
   }
 
   function removeWall(index: number) {
+    setDirty(true);
     setGeometry((g) =>
       g ? { ...g, walls: g.walls.filter((_, i) => i !== index) } : g,
     );
@@ -146,6 +176,7 @@ export function CadReviewPanel({
       return;
     }
     const from = drag.from;
+    setDirty(true);
     setGeometry((g) => {
       if (!g) return g;
       return kind === "room"
@@ -155,21 +186,33 @@ export function CadReviewPanel({
     setDrag(null);
   }
 
+  async function saveGeometry(current: Geometry) {
+    const res = await fetch(`/api/projects/${projectId}/geometry`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(current),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.error ?? "Could not save corrections.");
+  }
+
   async function handleSaveCorrections() {
     if (!geometry) return;
     setStatus("saving");
     setError(null);
+    setNotice(null);
 
     try {
-      const res = await fetch(`/api/projects/${projectId}/geometry`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(geometry),
-      });
-      const body = await res.json();
-      if (!res.ok) throw new Error(body.error ?? "Could not save corrections.");
+      await saveGeometry(geometry);
+      const hadBoq = boq !== null;
+      setDirty(false);
       setBoq(null); // a correction invalidates any BOQ already on screen
       onBoqChange?.(null);
+      setNotice(
+        hadBoq
+          ? "Corrections saved. The previous BOQ was cleared — press “Calculate BOQ” to price the updated drawing."
+          : "Corrections saved.",
+      );
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Could not save corrections.",
@@ -180,24 +223,45 @@ export function CadReviewPanel({
   }
 
   async function handleCalculateBoq() {
+    if (!geometry) return;
     setStatus("calculating");
     setError(null);
+    setNotice(null);
+    onCalculatingChange?.(true);
 
     try {
+      // The server prices the SAVED drawing, so push unsaved edits first.
+      if (dirty) {
+        await saveGeometry(geometry);
+        setDirty(false);
+      }
       const res = await fetch(`/api/projects/${projectId}/finalize`, {
         method: "POST",
       });
-      const body = await res.json();
+      const body = await res.json().catch(() => ({}));
       if (!res.ok)
-        throw new Error(body.error ?? "Could not calculate the BOQ.");
+        throw new Error(
+          body.error ??
+            "Could not calculate the BOQ. The request may have timed out — please try again.",
+        );
       setBoq(body.boq as BOQResult);
       onBoqChange?.(body.boq as BOQResult);
+      setNotice(
+        "BOQ calculated — scroll down to review the priced quantities.",
+      );
+      // Wait a tick so the BOQ card has rendered, then bring it into view.
+      setTimeout(() => {
+        document
+          .getElementById(boqAnchorId)
+          ?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+      }, 150);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Could not calculate the BOQ.",
       );
     } finally {
       setStatus("reviewing");
+      onCalculatingChange?.(false);
     }
   }
 
@@ -291,8 +355,53 @@ export function CadReviewPanel({
         )}
       </div>
 
+      {status === "calculating" && (
+        <div
+          role="status"
+          className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900"
+        >
+          <Loader2 className="mt-0.5 size-4 shrink-0 animate-spin" />
+          <div>
+            <p className="text-sm font-semibold">
+              Pricing your BOQ… {elapsed}s
+            </p>
+            <p className="mt-0.5 text-xs text-amber-800">
+              Looking up current market rates for this city. The first BOQ for a
+              city can take up to 2 minutes; it is much faster when rates were
+              fetched recently. Please keep this page open.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {notice && status !== "calculating" && (
+        <div
+          role="status"
+          className="flex items-start gap-2.5 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800"
+        >
+          <CircleCheck className="mt-0.5 size-4 shrink-0" />
+          <span className="flex-1">{notice}</span>
+          {boq && (
+            <button
+              type="button"
+              onClick={() =>
+                document
+                  .getElementById(boqAnchorId)
+                  ?.scrollIntoView?.({ behavior: "smooth", block: "start" })
+              }
+              className="cursor-pointer whitespace-nowrap font-semibold underline"
+            >
+              Jump to BOQ
+            </button>
+          )}
+        </div>
+      )}
+
       {error && (
-        <p className="text-sm text-red-600" role="alert">
+        <p
+          className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+          role="alert"
+        >
           {error}
         </p>
       )}
@@ -498,23 +607,36 @@ export function CadReviewPanel({
             </div>
           </section>
 
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <Button
               onClick={handleSaveCorrections}
-              disabled={status === "saving"}
-              className="h-10 cursor-pointer bg-brand px-4 text-white hover:bg-brand-dark disabled:cursor-not-allowed"
+              disabled={busy}
+              className="h-10 cursor-pointer gap-2 bg-brand px-4 text-white hover:bg-brand-dark disabled:cursor-not-allowed"
             >
+              {status === "saving" && (
+                <Loader2 className="size-4 animate-spin" />
+              )}
               {status === "saving" ? "Saving…" : "Save corrections"}
             </Button>
             <Button
               onClick={handleCalculateBoq}
-              disabled={status === "calculating"}
+              disabled={busy}
               variant="outline"
               className="h-10 cursor-pointer gap-2 px-4 disabled:cursor-not-allowed"
             >
-              <Calculator className="size-4" />
+              {status === "calculating" ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Calculator className="size-4" />
+              )}
               {status === "calculating" ? "Calculating…" : "Calculate BOQ"}
             </Button>
+            {dirty && status === "reviewing" && (
+              <span className="text-xs font-medium text-amber-700">
+                Unsaved changes — they will be saved automatically when you
+                calculate.
+              </span>
+            )}
           </div>
         </>
       )}
