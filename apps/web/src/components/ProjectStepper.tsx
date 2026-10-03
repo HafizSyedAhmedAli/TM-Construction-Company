@@ -1,42 +1,34 @@
-import { Check } from "lucide-react";
-
 export function ProjectStepper({
   hasCad,
   hasBoq,
-  hasRender,
 }: {
   hasCad: boolean;
   hasBoq: boolean;
-  hasRender: boolean;
 }) {
   const steps = [
     { label: "Project created", done: true },
     { label: "Upload drawing", done: hasCad },
+    { label: "3D model", done: hasCad },
     { label: "Review & price BOQ", done: hasBoq },
-    { label: "3D render", done: hasRender },
-    { label: "Present to client", done: hasBoq && hasRender },
+    { label: "Present to client", done: hasBoq },
   ];
   const current = steps.findIndex((s) => !s.done);
   return (
-    <ol className="print:hidden flex flex-wrap gap-2">
+    <ol className="print:hidden flex flex-wrap gap-2 mb-8">
       {steps.map((s, i) => {
         const state = s.done ? "done" : i === current ? "current" : "todo";
         return (
           <li
             key={s.label}
-            className={`flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-medium ${
+            className={`flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium border ${
               state === "done"
-                ? "border-green-200 bg-green-50 text-green-700"
+                ? "bg-green-50 border-green-200 text-green-700"
                 : state === "current"
-                  ? "border-brand bg-brand text-white"
-                  : "border-stone-200 bg-white text-stone-400"
+                  ? "bg-brand text-white border-brand"
+                  : "bg-white border-stone-200 text-stone-400"
             }`}
           >
-            {state === "done" ? (
-              <Check className="size-3.5" />
-            ) : (
-              <span>{i + 1}</span>
-            )}
+            <span>{state === "done" ? "✓" : i + 1}</span>
             {s.label}
           </li>
         );

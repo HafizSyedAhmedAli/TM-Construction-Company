@@ -44,6 +44,8 @@ interface CadReviewPanelProps {
   onCalculatingChange?: (calculating: boolean) => void;
   /** Element id to scroll to once the BOQ is ready. */
   boqAnchorId?: string;
+  /** Called whenever the geometry changes (upload or manual correction). */
+  onGeometryChange?: (g: Geometry | null) => void;
 }
 
 type Status = "idle" | "uploading" | "reviewing" | "saving" | "calculating";
@@ -69,6 +71,7 @@ export function CadReviewPanel({
   showBoq = true,
   onCalculatingChange,
   boqAnchorId = "boq-section",
+  onGeometryChange,
 }: CadReviewPanelProps) {
   const [geometry, setGeometry] = useState<Geometry | null>(initialGeometry);
   const [boq, setBoq] = useState<BOQResult | null>(initialBoq);
@@ -81,6 +84,11 @@ export function CadReviewPanel({
   const [notice, setNotice] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    onGeometryChange?.(geometry);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [geometry]);
 
   const busy =
     status === "uploading" || status === "saving" || status === "calculating";

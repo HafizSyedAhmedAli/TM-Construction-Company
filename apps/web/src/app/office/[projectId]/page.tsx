@@ -31,7 +31,7 @@ export default async function OfficeProjectPage({
 
   const project = await prisma.project.findUnique({
     where: { id: projectId },
-    include: { lead: true, cadFile: true, render: true },
+    include: { lead: true, cadFile: true },
   });
 
   if (!project) notFound();
@@ -131,24 +131,6 @@ export default async function OfficeProjectPage({
                 project.cadFile?.boq
                   ? (project.cadFile.boq as unknown as BOQResult)
                   : null
-              }
-              initialRender={
-                project.render
-                  ? {
-                      imageUrl: project.render.imageUrl,
-                      promptUsed: project.render.promptUsed,
-                      generatedAt: project.render.generatedAt.toISOString(),
-                    }
-                  : null
-              }
-              details={
-                <ProjectDetailsCard
-                  modelLabel={modelLabel}
-                  city={project.city}
-                  houseType={project.lead.houseType}
-                  contact={project.lead.contact}
-                  budgetRange={project.lead.budgetRange}
-                />
               }
             />
           </div>

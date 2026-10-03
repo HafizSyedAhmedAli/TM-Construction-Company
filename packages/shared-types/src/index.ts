@@ -156,4 +156,13 @@ export function fixedLabourItems(category: Category): RateCardItem[] {
   ];
 }
 
+export interface Opening {
+  id: string; type: "door" | "window"; width: number; height: number;
+  x?: number; y?: number; angle?: number; // midpoint + wall angle, ft
+}
+export interface Room {
+  id: string; name: string; area: number; type: RoomType;
+  labelX?: number; labelY?: number;
+}
+
 export * from "./pakistan-cities";

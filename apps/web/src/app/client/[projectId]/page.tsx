@@ -1,27 +1,26 @@
 // apps/web/src/app/client/[projectId]/page.tsx
+import { BoqTable } from "@/components/BoqTable";
+import { SiteFooter } from "@/components/SiteFooter";
+import { ViewerPanel } from "@/components/ViewerPanel";
+import { ASSUMPTIONS, EXCLUSIONS, formatPkr } from "@/lib/boq-format";
+import { prisma } from "@tmcc/db";
+import type { BOQResult, Geometry } from "@tmcc/shared-types";
+import {
+    Download,
+    Home,
+    Info,
+    Layers,
+    MapPin,
+    Phone,
+    Receipt,
+    Ruler,
+    ShieldCheck,
+    Tag,
+    User
+} from "lucide-react";
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import {
-  Box,
-  Download,
-  Home,
-  Info,
-  Layers,
-  MapPin,
-  Phone,
-  Receipt,
-  Ruler,
-  ShieldCheck,
-  Tag,
-  User,
-} from "lucide-react";
 import type { ReactNode } from "react";
-import type { BOQResult, Geometry } from "@tmcc/shared-types";
-import { prisma } from "@tmcc/db";
-import { BoqTable } from "@/components/BoqTable";
-import { ClientGallery } from "@/components/ClientGallery";
-import { SiteFooter } from "@/components/SiteFooter";
-import { ASSUMPTIONS, EXCLUSIONS, formatPkr } from "@/lib/boq-format";
 
 const MODEL_LABELS: Record<number, string> = {
   1: "Land & Build, Then Sell",
@@ -69,7 +68,7 @@ export default async function ClientProjectPage({
 
   const project = await prisma.project.findUnique({
     where: { id: projectId },
-    include: { lead: true, cadFile: true, render: true },
+    include: { lead: true, cadFile: true },
   });
 
   if (!project) notFound();
@@ -84,15 +83,6 @@ export default async function ClientProjectPage({
   const areaSqFt = geometry
     ? Math.round(geometry.rooms.reduce((s, r) => s + r.area, 0))
     : null;
-
-  // Real render when one exists, otherwise the demo image so the page is
-  // never empty (e.g. while the AI image service is unavailable).
-  const images = [
-    {
-      src: project.render?.imageUrl ?? "/demo.jpg",
-      alt: "3D visualization of your house design",
-    },
-  ];
 
   const modelLabel = MODEL_LABELS[project.model] ?? `Model ${project.model}`;
 
@@ -122,12 +112,18 @@ export default async function ClientProjectPage({
       <main className="relative overflow-hidden bg-gradient-to-b from-stone-50 to-white pb-16">
         {/* Hero picture, faded into the page */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/demo.jpg"
-          alt=""
-          aria-hidden
-          className="pointer-events-none absolute right-0 top-0 hidden h-[260px] w-[55%] object-cover opacity-90 lg:block [mask-image:linear-gradient(to_right,transparent,black_45%)]"
-        />
+        {project.cadFile?.geometry ? (
+          <ViewerPanel
+            geometry={project.cadFile.geometry as unknown as Geometry}
+          />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src="/demo.jpg"
+            alt="House preview"
+            className="w-full h-auto block"
+          />
+        )}
 
         <div className="relative mx-auto max-w-6xl px-4 pt-10 sm:px-6">
           {/* Heading */}
@@ -144,7 +140,16 @@ export default async function ClientProjectPage({
           {/* Gallery + project details */}
           <div className="grid items-start gap-6 lg:grid-cols-[1fr_340px]">
             <section className={`${card} p-4 sm:p-5`}>
-              <ClientGallery images={images} />
+              {geometry ? (
+                <ViewerPanel geometry={geometry} bare />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src="/demo.jpg"
+                  alt="House preview"
+                  className="w-full h-auto block rounded-2xl"
+                />
+              )}
             </section>
 
             <aside className={`${card} p-6`}>

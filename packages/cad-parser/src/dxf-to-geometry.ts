@@ -13,6 +13,7 @@ import {
   type Seg,
 } from "./line-plan";
 import { Point2D, distance, pointInPolygon, polygonArea } from "./polygon";
+import { snapToWall } from "./place-openings";
 
 // --- Layer conventions this parser expects the CAD file to follow ---
 // A client's actual drawings may use different layer names; treat these
@@ -130,17 +131,22 @@ export function dxfToGeometry(dxf: RawDxfDocument): Geometry {
         y2: l.vertices[1].y,
       })),
     );
+    const walls = segmentsToWalls(
+      segs,
+      WALL_HEIGHT_FT,
+      WALL_THICKNESS_FT,
+      PARTITION_THICKNESS_FT,
+    );
     const openings: Opening[] = [
-      ...doorLines.map((l, i) => toOpening(l, i, "door", DOOR_HEIGHT_FT)),
-      ...windowLines.map((l, i) => toOpening(l, i, "window", WINDOW_HEIGHT_FT)),
+      ...doorLines.map((l, i) =>
+        toOpening(l, i, "door", DOOR_HEIGHT_FT, walls),
+      ),
+      ...windowLines.map((l, i) =>
+        toOpening(l, i, "window", WINDOW_HEIGHT_FT, walls),
+      ),
     ];
     return {
-      walls: segmentsToWalls(
-        segs,
-        WALL_HEIGHT_FT,
-        WALL_THICKNESS_FT,
-        PARTITION_THICKNESS_FT,
-      ),
+      walls,
       rooms: roomsFromWallSegments(
         segs,
         labels.map((l) => ({
@@ -186,18 +192,30 @@ export function dxfToGeometry(dxf: RawDxfDocument): Geometry {
       pointInPolygon({ x: l.startPoint.x, y: l.startPoint.y }, vertices),
     );
 
+    const mean = vertices.reduce(
+      (s, v) => ({
+        x: s.x + v.x / vertices.length,
+        y: s.y + v.y / vertices.length,
+      }),
+      { x: 0, y: 0 },
+    );
+
     rooms.push({
       id: `room-${roomIndex}`,
       name: label ? cleanRoomName(label.text) : `Room ${roomIndex + 1}`,
       area: polygonArea(vertices),
       type: label ? detectRoomType(label.text) : "general",
+      labelX: label ? label.startPoint.x : mean.x,
+      labelY: label ? label.startPoint.y : mean.y,
     });
   });
 
   const openings: Opening[] = [
-    ...doorLines.map((line, i) => toOpening(line, i, "door", DOOR_HEIGHT_FT)),
+    ...doorLines.map((line, i) =>
+      toOpening(line, i, "door", DOOR_HEIGHT_FT, walls),
+    ),
     ...windowLines.map((line, i) =>
-      toOpening(line, i, "window", WINDOW_HEIGHT_FT),
+      toOpening(line, i, "window", WINDOW_HEIGHT_FT, walls),
     ),
   ];
 
@@ -209,6 +227,7 @@ function toOpening(
   index: number,
   type: Opening["type"],
   height: number,
+  walls: Wall[],
 ): Opening {
   const [start, end] = line.vertices;
   return {
@@ -216,5 +235,6 @@ function toOpening(
     type,
     width: distance(start, end),
     height,
+    ...snapToWall(start, end, walls),
   };
 }
