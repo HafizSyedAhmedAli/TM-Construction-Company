@@ -67,7 +67,12 @@ const s = StyleSheet.create({
     paddingVertical: 2,
   },
   metaLabel: { color: GRAY },
-  metaValue: { fontFamily: "Helvetica-Bold" },
+  metaValue: {
+    fontFamily: "Helvetica-Bold",
+    flex: 1,
+    textAlign: "right",
+    paddingLeft: 12,
+  },
   thead: {
     flexDirection: "row",
     backgroundColor: "#fafaf9",
