@@ -36,8 +36,6 @@ This README has two parts:
 | Rates | `/office/rates` | Office | Review and approve market rates |
 | Client page | `/client/<project id>` | Customer | Render and cost summary only |
 
-> **Note:** There is currently **no login**. Anyone who has the link can open any page. Do not share office links outside the company.
-
 ### Step 1 – A customer submits the form (page `/`)
 
 The customer completes three steps:
