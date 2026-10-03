@@ -5,6 +5,8 @@ import { prisma, type Lead } from "@tmcc/db";
 import { ConvertLeadForm } from "@/components/ConvertLeadForm";
 import { SiteFooter } from "@/components/SiteFooter";
 
+export const dynamic = "force-dynamic";
+
 const SOURCE_LABELS: Record<string, string> = {
   FORM: "Web form",
   WHATSAPP: "WhatsApp",
