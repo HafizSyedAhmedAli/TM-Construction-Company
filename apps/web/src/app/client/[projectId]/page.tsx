@@ -110,21 +110,6 @@ export default async function ClientProjectPage({
       </header>
 
       <main className="relative overflow-hidden bg-gradient-to-b from-stone-50 to-white pb-16">
-        {/* Hero picture, faded into the page */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        {project.cadFile?.geometry ? (
-          <ViewerPanel
-            geometry={project.cadFile.geometry as unknown as Geometry}
-          />
-        ) : (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src="/demo.jpg"
-            alt="House preview"
-            className="w-full h-auto block"
-          />
-        )}
-
         <div className="relative mx-auto max-w-6xl px-4 pt-10 sm:px-6">
           {/* Heading */}
           <div className="mb-8">
