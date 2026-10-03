@@ -15,7 +15,6 @@ export function mergeRateCards(
 
   return {
     ...base,
-    taxPercent: approved.taxPercent,
     items: [...byType.values()],
   };
 }

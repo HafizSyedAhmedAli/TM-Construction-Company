@@ -1,13 +1,17 @@
 import { prisma } from "@tmcc/db";
 import {
-  DEFAULT_TAX_PERCENT,
   isCompleteRateCard,
   mergeRateCards,
   missingItemTypes,
   withFixedLabour,
 } from "@tmcc/rate-cards";
 import { researchCompleteRates } from "@tmcc/rate-research";
-import { canonicalCityName, type Category, type RateCard, type RateCardItem } from "@tmcc/shared-types";
+import {
+  canonicalCityName,
+  type Category,
+  type RateCard,
+  type RateCardItem,
+} from "@tmcc/shared-types";
 
 export class RateSetError extends Error {
   constructor(public code: "NOT_FOUND" | "NOT_DRAFT") {
@@ -32,8 +36,6 @@ export class RateUnavailableError extends Error {
 
 const DAY_MS = 86_400_000;
 const maxAgeDays = () => Number(process.env.RATE_MAX_AGE_DAYS) || 30;
-const taxPercent = () =>
-  Number(process.env.BOQ_TAX_PERCENT) || DEFAULT_TAX_PERCENT;
 
 // One search per city/category at a time: concurrent requests share it.
 const inflight = new Map<string, Promise<RateCard>>();
@@ -83,7 +85,6 @@ async function resolveLiveRateCard(
     ? withFixedLabour({
         city,
         category,
-        taxPercent: row.taxPercent,
         items: row.items as unknown as RateCardItem[],
       })
     : undefined;
@@ -118,7 +119,6 @@ async function resolveLiveRateCard(
   const fromSearch: RateCard = {
     city,
     category,
-    taxPercent: taxPercent(),
     items: researched.items,
   };
 
@@ -152,7 +152,6 @@ async function saveAutoRateSet(
         category,
         status: "APPROVED",
         origin: "gemini-auto",
-        taxPercent: card.taxPercent,
         items: card.items as unknown as object,
         sources: sources as object,
         approvedAt: new Date(),

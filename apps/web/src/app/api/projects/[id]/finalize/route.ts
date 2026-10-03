@@ -1,6 +1,6 @@
 // apps/web/src/app/api/projects/[id]/finalize/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import type { Geometry } from "@tmcc/shared-types";
+import type { EngagementModel, Geometry } from "@tmcc/shared-types";
 import { estimateFromGeometry } from "@tmcc/rate-cards";
 import { prisma } from "@tmcc/db";
 import { getLiveRateCard, RateUnavailableError } from "@/lib/rate-sets";
@@ -48,8 +48,10 @@ export async function POST(_req: NextRequest, { params }: RouteContext) {
 
   const boq = estimateFromGeometry({
     geometry: cadFile.geometry as unknown as Geometry,
+    model: project.model as EngagementModel,
     rateCard,
   });
+
   if (!boq) {
     return NextResponse.json(
       {

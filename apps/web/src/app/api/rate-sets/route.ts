@@ -20,9 +20,9 @@ export async function POST(req: NextRequest) {
       category: body.category,
       status: "DRAFT",
       origin: "manual",
-      taxPercent: typeof body.taxPercent === "number" ? body.taxPercent : 17,
       items: v.items as unknown as object,
     },
   });
+  
   return NextResponse.json(draft, { status: 201 });
 }

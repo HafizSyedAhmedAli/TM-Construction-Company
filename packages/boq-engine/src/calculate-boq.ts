@@ -55,6 +55,7 @@ const QUANTITY_BASIS: Record<
 export function calculateBoq(
   geometry: Geometry,
   rateCard: RateCard,
+  taxPercent: number = rateCard.taxPercent ?? 0,
 ): BOQResult {
   const lineItems: BOQLineItem[] = rateCard.items
     .map((rateItem) => {
@@ -73,6 +74,6 @@ export function calculateBoq(
     .filter((item) => item.quantity > 0);
 
   const subtotal = lineItems.reduce((sum, item) => sum + item.subtotal, 0);
-  const tax = subtotal * (rateCard.taxPercent / 100);
+  const tax = subtotal * (taxPercent / 100);
   return { lineItems, subtotal, tax, total: subtotal + tax };
 }

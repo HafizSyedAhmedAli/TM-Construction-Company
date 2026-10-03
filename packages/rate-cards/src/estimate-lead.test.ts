@@ -10,7 +10,16 @@ describe("estimateLead", () => {
     });
     expect(result).not.toBeNull();
     expect(result!.total).toBeGreaterThan(0);
-    expect(result!.tax).toBeCloseTo(result!.subtotal * 0.17, 2);
+    expect(result!.tax).toBeCloseTo(result!.subtotal * 0.1, 2);
+  });
+
+  it.each([
+    [1, 0.15],
+    [2, 0.1],
+    [3, 0.05],
+  ] as const)("applies the model %i tax rate (%f)", (model, rate) => {
+    const r = estimateLead({ model, rateCard: testRateCard() })!;
+    expect(r.tax).toBeCloseTo(r.subtotal * rate, 2);
   });
 
   it("returns null when no rate card is available (no built-in fallback)", () => {

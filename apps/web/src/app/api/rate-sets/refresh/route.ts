@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { canonicalCityName, type Category } from "@tmcc/shared-types";
 import { researchCompleteRates } from "@tmcc/rate-research";
-import { DEFAULT_TAX_PERCENT } from "@tmcc/rate-cards";
 import { prisma } from "@tmcc/db";
 
 export const maxDuration = 120; // 17 items = two grounded searches (+ retry)
@@ -38,7 +37,6 @@ export async function POST(req: NextRequest) {
       category,
       status: "DRAFT",
       origin: "gemini",
-      taxPercent: DEFAULT_TAX_PERCENT,
       items: research.items as unknown as object,
       sources: research.sources as unknown as object,
     },

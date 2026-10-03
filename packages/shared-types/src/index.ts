@@ -57,8 +57,18 @@ export interface RateCard {
   city: string;
   category: Category;
   items: RateCardItem[];
-  taxPercent: number;
+  /** Deprecated: tax now comes from the engagement model (see MODEL_TAX_PERCENT). */
+  taxPercent?: number;
 }
+
+export const MODEL_TAX_PERCENT: Record<EngagementModel, number> = {
+  1: 15, // Land & Build, Then Sell (company does everything)
+  2: 10, // Construction on Client's Plot
+  3: 5, // Client's Plot & Client's Construction Cost
+};
+
+export const taxPercentForModel = (model: EngagementModel): number =>
+  MODEL_TAX_PERCENT[model];
 
 export interface BOQLineItem {
   itemType: RateItemType;
@@ -157,12 +167,21 @@ export function fixedLabourItems(category: Category): RateCardItem[] {
 }
 
 export interface Opening {
-  id: string; type: "door" | "window"; width: number; height: number;
-  x?: number; y?: number; angle?: number; // midpoint + wall angle, ft
+  id: string;
+  type: "door" | "window";
+  width: number;
+  height: number;
+  x?: number;
+  y?: number;
+  angle?: number; // midpoint + wall angle, ft
 }
 export interface Room {
-  id: string; name: string; area: number; type: RoomType;
-  labelX?: number; labelY?: number;
+  id: string;
+  name: string;
+  area: number;
+  type: RoomType;
+  labelX?: number;
+  labelY?: number;
 }
 
 export * from "./pakistan-cities";
