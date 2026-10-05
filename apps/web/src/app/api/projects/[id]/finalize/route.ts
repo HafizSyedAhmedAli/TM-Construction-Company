@@ -38,7 +38,7 @@ export async function POST(_req: NextRequest, { params }: RouteContext) {
     if (err instanceof RateUnavailableError) {
       return NextResponse.json(
         {
-          error: `${err.message}. Try again, or add rates manually on the Rates page.`,
+          error: `${err.message}. Ask office to import the CSR for this region or add rates on the Rates page.`,
         },
         { status: 502 },
       );

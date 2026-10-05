@@ -17,7 +17,6 @@ import {
   User,
 } from "lucide-react";
 import { CITY_NAMES, type RateCardItem } from "@tmcc/shared-types";
-import type { ResearchSources } from "@tmcc/rate-research";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,6 +25,7 @@ import {
   NativeSelectOption,
 } from "@/components/ui/native-select";
 import { BOQ_META, unitLabel } from "@/lib/boq-format";
+import { ResearchSources } from "@/app/office/rates/page";
 
 export interface DraftRateSet {
   id: string;

@@ -2,15 +2,53 @@
 import { BadgeCheck, MapPin, ShieldCheck } from "lucide-react";
 import { prisma } from "@tmcc/db";
 import type { RateCardItem } from "@tmcc/shared-types";
-import type { ResearchSources } from "@tmcc/rate-research";
-import {
-  RateSetReviewPanel,
-  type ApprovedRateSet,
-  type DraftRateSet,
-} from "@/components/RateSetReviewPanel";
 import { SiteFooter } from "@/components/SiteFooter";
+import { RateSetReviewPanel } from "@/components/RateSetReviewPanel";
 
 export const dynamic = "force-dynamic";
+
+export type RateScope = "city" | "nearby" | "national";
+interface RateSource {
+  itemType: string;
+  /** Where the price actually applies (may be a nearby market or Pakistan-wide). */
+  priceLocation: string | null;
+  scope: RateScope | null;
+  sourceName: string | null;
+  sourceUrl: string | null;
+  sourceDate: string | null; // YYYY-MM-DD
+  note: string | null;
+}
+
+export interface ResearchSources {
+  items: RateSource[];
+  grounding: { url: string; title: string | null }[]; // pages the search returned
+  warnings: string[];
+  model: string;
+  searchedAt: string;
+}
+
+export interface DraftRateSet {
+  id: string;
+  city: string;
+  category: string;
+  origin: string;
+  createdAt: string;
+  createdLabel?: string;
+  items: RateCardItem[];
+  sources: ResearchSources | null;
+}
+
+export interface ApprovedRateSet {
+  id: string;
+  city: string;
+  category: string;
+  origin: string;
+  approvedBy: string;
+  approvedLabel: string;
+  approvedAt: string | null;
+  items: RateCardItem[];
+  sources: ResearchSources | null;
+}
 
 export default async function OfficeRatesPage() {
   const [drafts, approved] = await Promise.all([
@@ -73,8 +111,7 @@ export default async function OfficeRatesPage() {
             Approved <span className="text-brand">Rates</span>
           </h1>
           <p className="mt-4 max-w-md text-base text-stone-500">
-            A BOQ only uses approved rates. Drafts come from a Gemini web search
-            and must be reviewed first.
+            A BOQ only uses approved rates.
           </p>
           <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-stone-600">
             <span className="flex items-center gap-1.5">

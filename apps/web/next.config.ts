@@ -8,7 +8,6 @@ const nextConfig: NextConfig = {
     "@tmcc/lead-intake",
     "@tmcc/boq-engine",
     "@tmcc/rate-cards",
-    "@tmcc/rate-research",
     "@tmcc/cad-parser",
     "@tmcc/db",
   ],
