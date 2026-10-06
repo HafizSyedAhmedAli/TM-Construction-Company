@@ -43,6 +43,7 @@
     "start": "next start",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "import-rates": "tsx scripts/import-rates.ts"
   }
 }
