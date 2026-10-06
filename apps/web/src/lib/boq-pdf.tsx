@@ -19,6 +19,7 @@ import {
   taxPercent,
   unitLabel,
 } from "@/lib/boq-format";
+import { rateBasisLine } from "./rate-basis";
 
 export interface BoqPdfData {
   boq: BOQResult;
@@ -277,6 +278,9 @@ function BoqPdf({ d }: { d: BoqPdfData }) {
           Approx. Rs {Math.round(perSqft).toLocaleString("en-PK")} per sq ft
           (incl. tax)
         </Text>
+        {d.boq.rateBasis && (
+          <Text style={s.perSqft}>{rateBasisLine(d.boq.rateBasis)}</Text>
+        )}
 
         {/* Notes + signatures move to page 2 together if they don't fit */}
         <View wrap={false}>

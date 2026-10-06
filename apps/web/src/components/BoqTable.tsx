@@ -16,6 +16,7 @@ import {
   unitLabel,
   type Group,
 } from "@/lib/boq-format";
+import { rateBasisLine } from "@/lib/rate-basis";
 
 const num = new Intl.NumberFormat("en-PK", { maximumFractionDigits: 0 });
 
@@ -111,6 +112,18 @@ export function BoqTable({ boq }: { boq: BOQResult }) {
           </div>
         </dl>
       </div>
+
+      {boq.rateBasis && (
+        <p
+          className={`mt-3 text-xs ${
+            boq.rateBasis.isFallback
+              ? "font-medium text-amber-700"
+              : "text-stone-500"
+          }`}
+        >
+          {rateBasisLine(boq.rateBasis)}
+        </p>
+      )}
     </div>
   );
 }

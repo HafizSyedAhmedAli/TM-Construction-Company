@@ -1,3 +1,4 @@
+// apps/web/src/app/api/projects/[id]/finalize/route.test.ts
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { RATE_ITEM_TYPES } from "@tmcc/shared-types";
@@ -14,11 +15,11 @@ vi.mock("@tmcc/db", () => ({
 
 vi.mock("@/lib/rate-sets", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/rate-sets")>();
-  return { ...actual, getLiveRateCard: vi.fn() };
+  return { ...actual, getRateCardWithBasis: vi.fn() };
 });
 
 import { prisma } from "@tmcc/db";
-import { getLiveRateCard, RateUnavailableError } from "@/lib/rate-sets";
+import { getRateCardWithBasis, RateUnavailableError } from "@/lib/rate-sets";
 
 const UNIT: Record<string, RateCard["items"][number]["unit"]> = {
   steelFixing: "ton",
@@ -40,6 +41,18 @@ function liveCard(city: string, category: Category = "B"): RateCard {
       unit: UNIT[itemType] ?? "sqft",
       unitRate: 100,
     })),
+  };
+}
+
+function resolved(city: string, place = city) {
+  return {
+    card: liveCard(city),
+    basis: {
+      place,
+      isFallback: place !== city,
+      origin: "csr",
+      sources: { document: "Sindh CSR", year: 2026 },
+    },
   };
 }
 
@@ -73,6 +86,28 @@ const GEOMETRY: Geometry = {
   openings: [{ id: "o1", type: "door", width: 3, height: 7 }],
 };
 
+function arrange(city: string) {
+  (prisma.project.findUnique as any).mockResolvedValue({
+    id: "p1",
+    city,
+    category: "B",
+    model: 2,
+  });
+  (prisma.cadFile.findUnique as any).mockResolvedValue({
+    id: "cad_1",
+    projectId: "p1",
+    geometry: GEOMETRY,
+  });
+  (prisma.cadFile.update as any).mockImplementation(({ data }: any) =>
+    Promise.resolve({
+      id: "cad_1",
+      projectId: "p1",
+      geometry: GEOMETRY,
+      ...data,
+    }),
+  );
+}
+
 describe("POST /api/projects/:id/finalize", () => {
   beforeEach(() => vi.clearAllMocks());
 
@@ -97,19 +132,10 @@ describe("POST /api/projects/:id/finalize", () => {
     expect(prisma.cadFile.update).not.toHaveBeenCalled();
   });
 
-  it("502s with a clear message and saves nothing when live rates can't be found (no placeholder fallback)", async () => {
-    (prisma.project.findUnique as any).mockResolvedValue({
-      id: "p1",
-      city: "Multan",
-      category: "B",
-    });
-    (prisma.cadFile.findUnique as any).mockResolvedValue({
-      id: "cad_1",
-      projectId: "p1",
-      geometry: GEOMETRY,
-    });
-    (getLiveRateCard as any).mockRejectedValue(
-      new RateUnavailableError("Multan", "B", "no prices found"),
+  it("502s with a clear message and saves nothing when no rates exist (no placeholder fallback)", async () => {
+    arrange("Multan");
+    (getRateCardWithBasis as any).mockRejectedValue(
+      new RateUnavailableError("Multan", "B", "no CSR data"),
     );
 
     const res = await POST(req() as any, ctx("p1"));
@@ -121,26 +147,9 @@ describe("POST /api/projects/:id/finalize", () => {
     expect(prisma.project.update).not.toHaveBeenCalled();
   });
 
-  it("prices the project's real geometry, persists the BOQ, and marks the project FINALIZED", async () => {
-    (prisma.project.findUnique as any).mockResolvedValue({
-      id: "p1",
-      city: "Karachi",
-      category: "B",
-    });
-    (prisma.cadFile.findUnique as any).mockResolvedValue({
-      id: "cad_1",
-      projectId: "p1",
-      geometry: GEOMETRY,
-    });
-    (getLiveRateCard as any).mockResolvedValue(liveCard("Karachi"));
-    (prisma.cadFile.update as any).mockImplementation(({ data }: any) =>
-      Promise.resolve({
-        id: "cad_1",
-        projectId: "p1",
-        geometry: GEOMETRY,
-        ...data,
-      }),
-    );
+  it("prices the real geometry, records the rate basis, and marks the project FINALIZED", async () => {
+    arrange("Karachi");
+    (getRateCardWithBasis as any).mockResolvedValue(resolved("Karachi"));
 
     const res = await POST(req() as any, ctx("p1"));
     const json = await res.json();
@@ -153,6 +162,13 @@ describe("POST /api/projects/:id/finalize", () => {
     expect(
       json.boq.lineItems.find((l: any) => l.itemType === "sanitary")?.quantity,
     ).toBe(1);
+    expect(json.boq.rateBasis).toEqual({
+      label: "Sindh CSR 2026",
+      place: "Karachi",
+      requestedCity: "Karachi",
+      isFallback: false,
+      origin: "csr",
+    });
     expect(prisma.cadFile.update).toHaveBeenCalledWith({
       where: { projectId: "p1" },
       data: { boq: json.boq },
@@ -160,6 +176,21 @@ describe("POST /api/projects/:id/finalize", () => {
     expect(prisma.project.update).toHaveBeenCalledWith({
       where: { id: "p1" },
       data: { status: "FINALIZED" },
+    });
+  });
+
+  it("flags the BOQ when another market's rates were used", async () => {
+    arrange("Nawabshah");
+    (getRateCardWithBasis as any).mockResolvedValue(
+      resolved("Nawabshah", "Hyderabad"),
+    );
+
+    const json = await (await POST(req() as any, ctx("p1"))).json();
+
+    expect(json.boq.rateBasis).toMatchObject({
+      place: "Hyderabad",
+      requestedCity: "Nawabshah",
+      isFallback: true,
     });
   });
 });

@@ -374,9 +374,7 @@ export function CadReviewPanel({
               Pricing your BOQ… {elapsed}s
             </p>
             <p className="mt-0.5 text-xs text-amber-800">
-              Looking up current market rates for this city. The first BOQ for a
-              city can take up to 2 minutes; it is much faster when rates were
-              fetched recently. Please keep this page open.
+              Applying approved rates for this city. Please keep this page open.
             </p>
           </div>
         </div>

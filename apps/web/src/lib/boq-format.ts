@@ -111,7 +111,7 @@ export const ASSUMPTIONS = [
   "Wall height 10 ft; 9 in exterior walls and 4.5 in interior partitions; door and window openings deducted.",
   "Reinforcement steel allowed at 4 kg per sq ft of covered area.",
   "Marble in living areas for Category A; tiles for Categories B and C. Kitchens and bathrooms are tiled.",
-  "Rates are indicative for the selected city and category and are subject to confirmation at contract stage.",
+  "Unit rates come from the rate schedule named under the totals and may differ from current market prices; they are subject to confirmation at contract stage.",
 ];
 
 export const EXCLUSIONS = [

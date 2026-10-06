@@ -25,30 +25,12 @@ import {
   NativeSelectOption,
 } from "@/components/ui/native-select";
 import { BOQ_META, unitLabel } from "@/lib/boq-format";
-import { ResearchSources } from "@/app/office/rates/page";
-
-export interface DraftRateSet {
-  id: string;
-  city: string;
-  category: string;
-  origin: string;
-  createdAt: string;
-  createdLabel?: string;
-  items: RateCardItem[];
-  sources: ResearchSources | null;
-}
-
-export interface ApprovedRateSet {
-  id: string;
-  city: string;
-  category: string;
-  origin: string;
-  approvedBy: string;
-  approvedLabel: string;
-  approvedAt: string | null;
-  items: RateCardItem[];
-  sources: ResearchSources | null;
-}
+import type {
+  ApprovedRateSet,
+  DraftRateSet,
+  RateSources,
+} from "@/lib/rate-set-types";
+import { CsrImportForm } from "./CsrImportForm";
 
 // Category is a material grade tier (see GRADE_HINT in @tmcc/rate-research).
 const CATEGORY_META: Record<
@@ -126,10 +108,20 @@ function SourceCell({
   sources,
   itemType,
 }: {
-  sources: ResearchSources | null;
+  sources: RateSources | null;
   itemType: string;
 }) {
-  const src = sources?.items.find((s) => s.itemType === itemType);
+  const src = sources?.items?.find((s) => s.itemType === itemType);
+
+  if (!src?.sourceUrl && sources?.document) {
+    return (
+      <span className="text-right text-xs text-stone-500">
+        {sources.document}
+        {sources.year ? ` ${sources.year}` : ""}
+      </span>
+    );
+  }
+
   return (
     <span className="text-right text-xs text-stone-500">
       {src?.sourceUrl ? (
@@ -142,15 +134,15 @@ function SourceCell({
           {src.sourceName ?? "source"}
         </a>
       ) : (
-        "no source"
+        "manual entry"
       )}
       {src?.sourceDate && ` · ${src.sourceDate}`}
     </span>
   );
 }
 
-// FR-15 / NFR-4: Gemini only ever proposes. Nothing reaches a BOQ until
-// office edits (if needed) and approves it here.
+// FR-15 / NFR-4: nothing reaches a BOQ until it is an APPROVED rate set,
+// either imported from a CSR or entered manually and approved here.
 export function RateSetReviewPanel({
   initialDrafts,
   approved,
@@ -202,32 +194,6 @@ export function RateSetReviewPanel({
     setApplied({ city: city.trim(), category });
   }
 
-  async function refresh() {
-    setBusy("refresh");
-    setError(null);
-    setNotice(null);
-    try {
-      const d = await call("/api/rate-sets/refresh", { city, category });
-      setDrafts((prev) => [
-        {
-          ...d,
-          createdAt: String(d.createdAt),
-          createdLabel: new Date(d.createdAt).toLocaleDateString("en-PK", {
-            dateStyle: "medium",
-          }),
-        },
-        ...prev,
-      ]);
-      setNotice(
-        `New draft for ${city} · Category ${category} is ready — review it below, then approve.`,
-      );
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Refresh failed");
-    } finally {
-      setBusy(null);
-    }
-  }
-
   async function approve(d: DraftRateSet) {
     if (!approvedBy.trim()) {
       setError("Enter your name in “Approved By” first.");
@@ -268,8 +234,6 @@ export function RateSetReviewPanel({
       setBusy(null);
     }
   }
-
-  const canFetch = !!city.trim() && !!category && busy === null;
 
   return (
     <div className="space-y-8">
@@ -366,43 +330,11 @@ export function RateSetReviewPanel({
               </Button>
             </div>
 
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-red-100/70 pt-4">
-              <p className="text-xs text-stone-500">
-                “Approved By” is the reviewer name saved when you approve a
-                draft below.
-              </p>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={refresh}
-                disabled={!canFetch}
-                title={
-                  !city || !category
-                    ? "Pick a city and a category first"
-                    : undefined
-                }
-                className="h-10 cursor-pointer gap-2 rounded-xl bg-white px-4 text-sm font-semibold disabled:cursor-not-allowed"
-              >
-                {busy === "refresh" ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="size-4" />
-                )}
-                {busy === "refresh"
-                  ? "Searching current prices…"
-                  : "Fetch new prices with Gemini"}
-              </Button>
-            </div>
+            <p className="mt-4 border-t border-red-100/70 pt-4 text-xs text-stone-500">
+              “Approved By” is the reviewer name saved when you approve a draft
+              below.
+            </p>
 
-            {busy === "refresh" && (
-              <p
-                role="status"
-                className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800"
-              >
-                Searching the web for current prices — this can take up to two
-                minutes. Keep this page open.
-              </p>
-            )}
             {error && (
               <p
                 role="alert"
@@ -474,8 +406,8 @@ export function RateSetReviewPanel({
                       colSpan={6}
                       className="px-5 py-12 text-center text-sm text-stone-400"
                     >
-                      No approved rates match this search. Pick a city and
-                      category, then use “Fetch new prices with Gemini”.
+                      No approved rates match this search. Import a CSR below or
+                      approve a manual draft.
                     </td>
                   </tr>
                 )}
@@ -580,6 +512,8 @@ export function RateSetReviewPanel({
         </div>
       </div>
 
+      <CsrImportForm />
+
       {/* Drafts */}
       <section>
         <h2 className="mb-3 flex items-center gap-3 text-lg font-bold text-brand-black">
@@ -612,7 +546,7 @@ export function RateSetReviewPanel({
                 </span>
               </div>
 
-              {d.sources?.warnings.map((w) => (
+              {d?.sources?.warnings?.map((w) => (
                 <p
                   key={w}
                   className="rounded-lg bg-amber-50 px-3 py-1.5 text-xs text-amber-700"

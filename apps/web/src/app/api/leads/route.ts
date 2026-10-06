@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
   // cannot be found in time the lead is still saved and `estimate` is null —
   // there is no placeholder estimate.
   const pending = getLiveRateCard(city, input.category!);
-  const rateCard = await withTimeout(pending, ESTIMATE_TIMEOUT_MS).catch(
+  const rateCard = await getLiveRateCard(city, input.category!).catch(
     () => null,
   );
   // If the search outlives the wait, let it finish (and save the rate set)
@@ -99,7 +99,5 @@ export async function POST(req: NextRequest) {
     rateCard: rateCard ?? undefined,
   });
 
-  // Flat shape on purpose: keeps `json.id` etc. working for any existing
-  // caller of this route, `estimate` just rides alongside it.
   return NextResponse.json({ ...lead, estimate }, { status: 201 });
 }

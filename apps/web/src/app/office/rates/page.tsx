@@ -4,51 +4,13 @@ import { prisma } from "@tmcc/db";
 import type { RateCardItem } from "@tmcc/shared-types";
 import { SiteFooter } from "@/components/SiteFooter";
 import { RateSetReviewPanel } from "@/components/RateSetReviewPanel";
+import type {
+  ApprovedRateSet,
+  DraftRateSet,
+  RateSources,
+} from "@/lib/rate-set-types";
 
 export const dynamic = "force-dynamic";
-
-export type RateScope = "city" | "nearby" | "national";
-interface RateSource {
-  itemType: string;
-  /** Where the price actually applies (may be a nearby market or Pakistan-wide). */
-  priceLocation: string | null;
-  scope: RateScope | null;
-  sourceName: string | null;
-  sourceUrl: string | null;
-  sourceDate: string | null; // YYYY-MM-DD
-  note: string | null;
-}
-
-export interface ResearchSources {
-  items: RateSource[];
-  grounding: { url: string; title: string | null }[]; // pages the search returned
-  warnings: string[];
-  model: string;
-  searchedAt: string;
-}
-
-export interface DraftRateSet {
-  id: string;
-  city: string;
-  category: string;
-  origin: string;
-  createdAt: string;
-  createdLabel?: string;
-  items: RateCardItem[];
-  sources: ResearchSources | null;
-}
-
-export interface ApprovedRateSet {
-  id: string;
-  city: string;
-  category: string;
-  origin: string;
-  approvedBy: string;
-  approvedLabel: string;
-  approvedAt: string | null;
-  items: RateCardItem[];
-  sources: ResearchSources | null;
-}
 
 export default async function OfficeRatesPage() {
   const [drafts, approved] = await Promise.all([
@@ -75,7 +37,7 @@ export default async function OfficeRatesPage() {
     createdAt: d.createdAt.toISOString(),
     createdLabel: label(d.createdAt),
     items: d.items as unknown as RateCardItem[],
-    sources: d.sources as unknown as ResearchSources | null,
+    sources: d.sources as unknown as RateSources | null,
   }));
 
   const approvedSets: ApprovedRateSet[] = approved.map((a) => ({
@@ -87,13 +49,12 @@ export default async function OfficeRatesPage() {
     approvedLabel: label(a.approvedAt),
     approvedAt: a.approvedAt?.toISOString() ?? null,
     items: a.items as unknown as RateCardItem[],
-    sources: a.sources as unknown as ResearchSources | null,
+    sources: a.sources as unknown as RateSources | null,
   }));
 
   return (
     <>
       <main className="relative min-h-[calc(100vh-72px)] overflow-hidden bg-gradient-to-b from-stone-50 to-white pb-16">
-        {/* Hero picture, faded into the page (same treatment as the other office pages) */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/demo.jpg"
@@ -111,7 +72,9 @@ export default async function OfficeRatesPage() {
             Approved <span className="text-brand">Rates</span>
           </h1>
           <p className="mt-4 max-w-md text-base text-stone-500">
-            A BOQ only uses approved rates.
+            A BOQ only uses approved rates. Rates come from an imported
+            Composite Schedule of Rates (CSR) or from drafts entered and
+            approved by office.
           </p>
           <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-stone-600">
             <span className="flex items-center gap-1.5">
@@ -119,7 +82,7 @@ export default async function OfficeRatesPage() {
             </span>
             <span className="hidden h-4 w-px bg-stone-300 sm:block" />
             <span className="flex items-center gap-1.5">
-              <MapPin className="size-4" /> City-wise market rates
+              <MapPin className="size-4" /> City-wise rates
             </span>
             <span className="hidden h-4 w-px bg-stone-300 sm:block" />
             <span className="flex items-center gap-1.5">

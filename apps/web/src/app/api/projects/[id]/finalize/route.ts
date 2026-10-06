@@ -1,13 +1,10 @@
 // apps/web/src/app/api/projects/[id]/finalize/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import type { EngagementModel, Geometry } from "@tmcc/shared-types";
+import type { BOQResult, EngagementModel, Geometry } from "@tmcc/shared-types";
 import { estimateFromGeometry } from "@tmcc/rate-cards";
 import { prisma } from "@tmcc/db";
-import { getLiveRateCard, RateUnavailableError } from "@/lib/rate-sets";
-
-// The first BOQ for a city runs a live AI price search (17 items, two
-// grounded searches plus a possible retry) before it can be priced.
-export const maxDuration = 120;
+import { getRateCardWithBasis, RateUnavailableError } from "@/lib/rate-sets";
+import { toRateBasisInfo } from "@/lib/rate-basis";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -29,11 +26,11 @@ export async function POST(_req: NextRequest, { params }: RouteContext) {
 
   const category = project.category as "A" | "B" | "C";
 
-  // No placeholder fallback: if live rates cannot be found, nothing is
-  // saved and the project is not marked FINALIZED.
-  let rateCard;
+  // No placeholder fallback: if no rates exist, nothing is saved and the
+  // project is not marked FINALIZED.
+  let resolved;
   try {
-    rateCard = await getLiveRateCard(project.city, category);
+    resolved = await getRateCardWithBasis(project.city, category);
   } catch (err) {
     if (err instanceof RateUnavailableError) {
       return NextResponse.json(
@@ -46,13 +43,13 @@ export async function POST(_req: NextRequest, { params }: RouteContext) {
     throw err;
   }
 
-  const boq = estimateFromGeometry({
+  const priced = estimateFromGeometry({
     geometry: cadFile.geometry as unknown as Geometry,
     model: project.model as EngagementModel,
-    rateCard,
+    rateCard: resolved.card,
   });
 
-  if (!boq) {
+  if (!priced) {
     return NextResponse.json(
       {
         error: `No rates available for ${project.city} / Category ${project.category}`,
@@ -60,6 +57,12 @@ export async function POST(_req: NextRequest, { params }: RouteContext) {
       { status: 422 },
     );
   }
+
+  // Snapshot of which schedule priced this BOQ; later imports don't change it.
+  const boq: BOQResult = {
+    ...priced,
+    rateBasis: toRateBasisInfo(resolved.basis, project.city),
+  };
 
   const updated = await prisma.cadFile.update({
     where: { projectId },

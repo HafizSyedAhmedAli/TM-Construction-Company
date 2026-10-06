@@ -78,11 +78,25 @@ export interface BOQLineItem {
   subtotal: number;
 }
 
+export interface RateBasisInfo {
+  /** "Sindh CSR 2026", or "Office-approved rates" for manual sets. */
+  label: string;
+  /** Place whose rates were actually used. */
+  place: string;
+  /** The project's own city. */
+  requestedCity: string;
+  /** True when `place` is not the project's own city. */
+  isFallback: boolean;
+  origin: string; // "csr" | "manual"
+}
+
 export interface BOQResult {
   lineItems: BOQLineItem[];
   subtotal: number;
   tax: number;
   total: number;
+  /** Which rate schedule priced this BOQ. Absent on BOQs saved before this existed. */
+  rateBasis?: RateBasisInfo;
 }
 
 export const RATE_ITEM_TYPES = [
